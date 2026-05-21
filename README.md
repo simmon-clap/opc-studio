@@ -1,6 +1,8 @@
-# OPC Agent Framework
+# OPC Studio
 
 一人公司 Agent 集群 · Mock 看板 + 架构讨论稿。
+
+**仓库：** [github.com/simmon-clap/opc-studio](https://github.com/simmon-clap/opc-studio)
 
 ## 快速启动
 
