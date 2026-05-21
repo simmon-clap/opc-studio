@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OPC 一人公司 · 业务全景（讨论稿 v3）</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg:#0f1117; --surface:#1a1d27; --surface2:#242836; --border:#2e3345;
+      --text:#e8eaef; --muted:#8b92a8; --accent:#5b8def;
+      --ceo:#f59e0b; --ops:#10b981; --product:#8b5cf6; --legal:#ef4444; --dev:#06b6d4; --you:#f472b6; --hitl:#fbbf24;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+    header{position:sticky;top:0;z-index:100;background:rgba(15,17,23,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:1rem 1.5rem}
+    header .top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:.75rem}
+    header h1{font-size:1.2rem;font-weight:600}
+    .badge{font-size:.72rem;padding:.2rem .55rem;border-radius:999px;background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+    nav{display:flex;gap:.4rem;flex-wrap:wrap}
+    nav button{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:.4rem .75rem;border-radius:8px;cursor:pointer;font-size:.8rem}
+    nav button:hover{color:var(--text);border-color:var(--accent)}
+    nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    main{max-width:1400px;margin:0 auto;padding:1.5rem}
+    main.wide{max-width:1600px}
+    section{display:none}
+    section.active{display:block;animation:fade .2s ease}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+    h2{font-size:1.45rem;margin-bottom:.4rem}
+    h3{font-size:1.05rem;margin:1.25rem 0 .6rem;color:var(--accent)}
+    .subtitle{color:var(--muted);margin-bottom:1.25rem;font-size:.92rem;max-width:80ch}
+    .diagram-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;margin:1rem 0;overflow-x:auto}
+    .diagram-box.hero{padding:1.25rem;border-color:rgba(91,141,239,.35);background:linear-gradient(180deg,rgba(91,141,239,.06),var(--surface))}
+    .mermaid svg{max-width:none!important}
+    .legend{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0}
+    .legend span{font-size:.75rem;padding:.25rem .55rem;border-radius:6px;border:1px solid var(--border)}
+    .lg-you{background:rgba(244,114,182,.12);color:var(--you)}
+    .lg-ceo{background:rgba(245,158,11,.12);color:var(--ceo)}
+    .lg-ops{background:rgba(16,185,129,.12);color:var(--ops)}
+    .lg-product{background:rgba(139,92,246,.12);color:var(--product)}
+    .lg-legal{background:rgba(239,68,68,.12);color:var(--legal)}
+    .lg-dev{background:rgba(6,182,212,.12);color:var(--dev)}
+    .lg-hitl{background:rgba(251,191,36,.12);color:var(--hitl)}
+    .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem}
+    .card.warn{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.05)}
+    .card.fix{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.05)}
+    .card h4{font-size:.95rem;margin-bottom:.45rem}
+    .card p,.card li{font-size:.86rem;color:var(--muted)}
+    .card ul{list-style:none;margin-top:.4rem}
+    .card li{padding:.15rem 0 .15rem .9rem;position:relative}
+    .card li::before{content:"·";position:absolute;left:0;color:var(--accent)}
+    table{width:100%;border-collapse:collapse;font-size:.86rem;background:var(--surface);border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+    th,td{padding:.7rem .9rem;text-align:left;border-bottom:1px solid var(--border)}
+    th{background:var(--surface2);color:var(--muted);font-size:.76rem}
+    tr:last-child td{border-bottom:none}
+    .pill{display:inline-block;padding:.12rem .45rem;border-radius:999px;font-size:.7rem;font-weight:600}
+    .open-questions{background:linear-gradient(135deg,rgba(91,141,239,.08),rgba(139,92,246,.08));border:1px dashed var(--accent);border-radius:12px;padding:1.1rem;margin-top:1.25rem}
+    footer{text-align:center;padding:1.5rem;color:var(--muted);font-size:.78rem;border-top:1px solid var(--border);margin-top:2rem}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top">
+      <h1>OPC 一人公司 · 业务开展逻辑</h1>
+      <span class="badge">讨论稿 v3 · 非实施方案</span>
+    </div>
+    <nav id="nav">
+      <button class="active" data-tab="master">★ 业务全景图</button>
+      <button data-tab="diagnosis">问题诊断</button>
+      <button data-tab="revised">修正模型</button>
+      <button data-tab="roles">角色分工</button>
+      <button data-tab="weekly">周报与台账</button>
+      <button data-tab="roadmap">阶段规划</button>
+    </nav>
+  </header>
+
+  <main class="wide">
+
+    <!-- ★ 业务全景图 -->
+    <section id="master" class="active">
+      <h2>公司业务开展 · 一张图看懂</h2>
+      <p class="subtitle">从线索到续费的完整业务链。实线 = 主流程；虚线 = 全程并行机制。颜色对应负责角色（见图例）。</p>
+
+      <div class="legend">
+        <span class="lg-you">■ 你 Founder</span>
+        <span class="lg-ceo">■ CEO Agent</span>
+        <span class="lg-ops">■ 运营 Agent</span>
+        <span class="lg-product">■ 产品 Agent</span>
+        <span class="lg-legal">■ 财务法务 Agent</span>
+        <span class="lg-dev">■ 开发 Agent</span>
+        <span class="lg-hitl">■ 你审批 HITL</span>
+      </div>
+
+      <div class="diagram-box hero">
+        <pre class="mermaid">
+flowchart TB
+  subgraph S1 ["阶段1 · 获客与销售（你主导）"]
+    A1["线索 / 客户找来"]
+    A2["你：沟通 · 听需求 · 建立信任"]
+    A3["你：整理纪要 → 交给 CEO"]
+    A1 --> A2 --> A3
+  end
+
+  subgraph S2 ["阶段2 · 评估与立项（CEO + 运营）"]
+    B1["CEO：7项必填 + 靠谱度 + 风险判断"]
+    B2{"CEO 结论"}
+    B3["待澄清：CEO 列问题 → 你再找客户聊"]
+    B4["建议不接：CEO 出风险报告 → 你确认搁置"]
+    B5["立项：CEO 启动内部流程"]
+    B6["运营：线索入台账 · 排期 · 优先级"]
+    A3 --> B1 --> B2
+    B2 -->|"缺信息"| B3 --> A2
+    B2 -->|"高风险/不靠谱"| B4
+    B2 -->|"可接 或 你明确指令"| B5 --> B6
+  end
+
+  subgraph S3 ["阶段3 · 方案与签约（可能走 PoC 分支）"]
+    C0{"客户需要先看到 Demo？"}
+    C1["开发：轻量 PoC / Demo"]
+    C2["产品：PRD + 验收标准"]
+    H1{"HITL-1 · 你审 PRD"}
+    C3["法务：报价 + 合同要点 + 合规"]
+    H2{"HITL-2 · 你审报价/合同"}
+    B5 --> C0
+    C0 -->|"是"| C1 --> C2
+    C0 -->|"否"| C2
+    C2 --> H1 --> C3 --> H2
+  end
+
+  subgraph S4 ["阶段4 · 开发与交付"]
+    D1["开发：方案 · 正式交付 · 自测"]
+    D2["运营：整理交付说明 + 客户沟通草稿"]
+    H3{"HITL-3 · 你审交付物"}
+    H4{"HITL-4 · 你审对外文案"}
+    H2 --> D1 --> H3 --> D2 --> H4
+  end
+
+  subgraph S5 ["阶段5 · 收尾与续费（公司不能在这里结束）"]
+    E1["你：对客户交付 · 演示 · 验收"]
+    E2["法务：开票/收款跟踪提醒"]
+    E3["运营：项目结项 · 台账归档"]
+    E4["你：维护关系 · 售后 · 新需求"]
+    H4 --> E1 --> E2 --> E3 --> E4
+    E4 -->|"新需求 / 复购"| A2
+  end
+
+  subgraph PAR ["全程并行 · 不是某个阶段才启动"]
+    P1["运营：Pipeline 台账实时更新"]
+    P2["CEO：异常/阻塞 → 随时向你升级"]
+    P3["每周：部门周报 → CEO 汇总 → 你"]
+    P4["你：定期看 Pipeline 一览"]
+  end
+
+  B6 -.-> P1
+  B1 -.-> P2
+  P1 -.-> P3 --> P4
+        </pre>
+      </div>
+
+      <h3>主流程 5 阶段 · 一句话</h3>
+      <table>
+        <thead><tr><th>阶段</th><th>业务目标</th><th>主导</th><th>你的动作</th></tr></thead>
+        <tbody>
+          <tr><td>1 获客销售</td><td>拿到真实需求</td><td>你</td><td>聊客户、写纪要、交给 CEO</td></tr>
+          <tr><td>2 评估立项</td><td>决定接不接、排进 Pipeline</td><td>CEO + 运营</td><td>补信息 / 确认搁置 / 同意开工</td></tr>
+          <tr><td>3 方案签约</td><td>明确做什么、多少钱</td><td>产品 + 法务 [+ 开发 PoC]</td><td>HITL-1 PRD · HITL-2 报价</td></tr>
+          <tr><td>4 开发交付</td><td>做出可交付成果</td><td>开发 + 运营</td><td>HITL-3 交付物 · HITL-4 文案</td></tr>
+          <tr><td>5 收尾续费</td><td>收钱、维护、带来新单</td><td>你 + 法务 + 运营</td><td>交付、收款、维护关系</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 问题诊断 -->
+    <section id="diagnosis">
+      <h2>问题诊断：为什么觉得有点「怪」？</h2>
+      <p class="subtitle">坦率说：<strong>方向是对的</strong>（你对外、Agent 对内、CEO 做枢纽），但 v2 模型有几处不太像真实公司做生意，容易感觉在「扮演大公司」而不是在「高效赚钱」。</p>
+
+      <div class="card-grid">
+        <div class="card warn">
+          <h4>❶ 流水线太「直」—— 不像真实项目</h4>
+          <p>v2 是 PRD → 报价 → 开发 一条直线。实际 SMB 销售常是：<strong>先 Demo 再谈钱</strong>，或开发中发现需求变了要回退。缺少 PoC 分支和迭代回路，就会假。</p>
+        </div>
+        <div class="card warn">
+          <h4>❷ 公司在「交付」就结束了</h4>
+          <p>缺 <strong>收款、售后、续费、转介绍</strong>。真实公司 30% 收入来自老客户。没有阶段 5，Agent 集群只像「项目外包工具」不像「公司」。</p>
+        </div>
+        <div class="card warn">
+          <h4>❸ 五个部门周报 → 对一人公司可能过重</h4>
+          <p>真实 1 人公司不需要 5 份部门周报。容易像<strong>模拟官僚</strong>：Agent 写报告给 Agent 汇总再给 1 个人。周报应服务决策，不是扮演组织架构。</p>
+        </div>
+        <div class="card warn">
+          <h4>❹ CEO 既是战略又是所有事的 Hub</h4>
+          <p>所有信息过 CEO 是对的，但 v2 没区分 <strong>「日常调度」vs「异常升级」</strong>。结果 CEO 既管排期又管风险又管汇总，角色膨胀，你也觉得虚。</p>
+        </div>
+        <div class="card warn">
+          <h4>❺ 运营与 CEO 有重叠</h4>
+          <p>运营排期、CEO 也判断资源冲突；你还要看台账、CEO 也汇报 Pipeline。<strong>同一件事三人碰</strong>，边界不清就怪。</p>
+        </div>
+        <div class="card warn">
+          <h4>❻ 「你只销售传话」与 4 个 HITL 仍有张力</h4>
+          <p>你说理想状态是获客+传话，但 PRD/报价/交付/文案都要审，加上看台账、收周报——<strong>你仍是超级 busy 的 PM</strong>。需要明确哪些 HITL 可以「默认批准+抽查」。</p>
+        </div>
+        <div class="card warn">
+          <h4>❼ 缺「售前准备」和「交付后 QA」</h4>
+          <p>CEO 收到纪后直接立项，缺 <strong>CEO 帮你准备见客户的问题清单</strong>（售前）。交付物给你之前，缺 <strong>开发自检 / 运营验收清单</strong>（内部 QA），HITL-3 压力全在你。</p>
+        </div>
+      </div>
+
+      <div class="open-questions">
+        <h3 style="margin-top:0;color:var(--text)">结论</h3>
+        <p style="color:var(--muted);font-size:.9rem;margin-top:.5rem">
+          <strong>符合做生意吗？</strong> — 骨架符合（获客→评估→签约→交付→续费），但 v2 缺后半段商业闭环、缺 PoC 分支、周报/角色分工偏「装公司」。<br><br>
+          <strong>建议</strong> — 见下一 Tab「修正模型」：用 <strong>5 阶段业务链</strong> 为主轴，Agent 角色挂在阶段上；周报改为一页纸；CEO 只管立项判断+异常+汇总。
+        </p>
+      </div>
+    </section>
+
+    <!-- 修正模型 -->
+    <section id="revised">
+      <h2>修正模型 v3 · 更像一家真的在运转的公司</h2>
+      <p class="subtitle">核心变化：以<strong>业务流程</strong>为主轴，Agent 角色<strong>挂在阶段上</strong>；减少「假官僚」；补全商业闭环。</p>
+
+      <div class="diagram-box hero">
+        <pre class="mermaid">
+flowchart LR
+  subgraph core [业务主轴]
+    direction LR
+    M1[获客] --> M2[评估立项] --> M3[方案签约] --> M4[开发交付] --> M5[收尾续费]
+    M5 --> M1
+  end
+
+  subgraph agents [Agent 挂载方式]
+    direction TB
+    R1["CEO → 阶段2 主导 + 全程异常升级"]
+    R2["运营 → 全程台账 · 排期 · 沟通草稿"]
+    R3["产品 → 阶段3 PRD"]
+    R4["法务 → 阶段3-5 报价/合同/收款"]
+    R5["开发 → 阶段3 PoC + 阶段4 交付"]
+  end
+
+  core ~~~ agents
+        </pre>
+      </div>
+
+      <h3>v2 → v3 关键调整</h3>
+      <table>
+        <thead><tr><th>问题</th><th>v3 修正</th></tr></thead>
+        <tbody>
+          <tr><td>流水线太直</td><td>增加 <strong>PoC 分支</strong>；PRD 可在 Demo 后重写；允许回流到阶段 2</td></tr>
+          <tr><td>交付即结束</td><td>增加 <strong>阶段 5</strong>：收款跟踪、售后、续费 → 新线索</td></tr>
+          <tr><td>周报过重</td><td>改为 <strong>CEO 一页纸周报</strong>（Pipeline + 待决 + 风险）；部门细节按需展开，不强制五份</td></tr>
+          <tr><td>CEO 膨胀</td><td>CEO 只管：立项判断、调度、异常升级、周报汇总；<strong>日常排期归运营</strong></td></tr>
+          <tr><td>运营/CEO 重叠</td><td>运营 = 台账+排期+草稿；CEO = 看运营数据做决策；你 = 看 Pipeline + 批 HITL</td></tr>
+          <tr><td>你太忙</td><td>HITL 分 <strong>必审</strong>（报价、合同、首次交付）和 <strong>可抽查</strong>（PRD 小改、常规进度文案）</td></tr>
+          <tr><td>缺售前/QA</td><td>CEO 产出<strong>见客户前问题清单</strong>；开发交付前过<strong>内部验收清单</strong>（运营核对）</td></tr>
+        </tbody>
+      </table>
+
+      <h3>修正后的 CEO 职责（更清晰）</h3>
+      <div class="card-grid">
+        <div class="card fix"><h4>✓ CEO 必须做</h4><ul><li>收到你的纪要 → 7 项 + 风险 → 立项/澄清/建议不接</li><li>调度产品/法务/开发/运营</li><li>异常（超期、超预算、scope 蔓延）升级给你</li><li>每周一页纸汇总给你</li><li>打包 HITL 呈报，不让你找各部门</li></ul></div>
+        <div class="card fix"><h4>✗ CEO 不应做</h4><ul><li>维护 Pipeline 明细（运营做）</li><li>写完整 PRD / 代码（专业 Agent 做）</li><li>代替你联系客户</li><li>生成五份冗长部门周报</li></ul></div>
+      </div>
+    </section>
+
+    <!-- 角色分工 -->
+    <section id="roles">
+      <h2>角色分工（按业务阶段挂载）</h2>
+      <table>
+        <thead><tr><th>角色</th><th>活跃阶段</th><th>核心产出</th><th>向你汇报</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill lg-you" style="background:rgba(244,114,182,.15);color:var(--you)">你</span></td><td>1→5 全程</td><td>客户信任、纪要、终审、收款、续费</td><td>—</td></tr>
+          <tr><td><span class="pill" style="background:rgba(245,158,11,.15);color:var(--ceo)">CEO</span></td><td>2→5 + 异常</td><td>立项判断、调度、HITL 打包、一页纸周报</td><td>主接口</td></tr>
+          <tr><td><span class="pill" style="background:rgba(16,185,129,.15);color:var(--ops)">运营</span></td><td>全程并行</td><td>Pipeline、排期、沟通草稿、内部验收清单</td><td>经 CEO / 台账你直接看</td></tr>
+          <tr><td><span class="pill" style="background:rgba(139,92,246,.15);color:var(--product)">产品</span></td><td>3</td><td>PRD、验收标准、见客户问题清单（与 CEO 协作）</td><td>经 CEO</td></tr>
+          <tr><td><span class="pill" style="background:rgba(239,68,68,.15);color:var(--legal)">法务</span></td><td>3→5</td><td>报价、合同、合规、收款提醒</td><td>经 CEO</td></tr>
+          <tr><td><span class="pill" style="background:rgba(6,182,212,.15);color:var(--dev)">开发</span></td><td>3 PoC + 4</td><td>Demo、交付物、自测报告</td><td>经 CEO</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 周报与台账 -->
+    <section id="weekly">
+      <h2>周报与台账（轻量化）</h2>
+      <p class="subtitle">v3 建议：CEO 一页纸周报 + 你定期看 Pipeline；不强制五部门各写长文。</p>
+      <div class="card" style="margin:1rem 0">
+        <h4>CEO 每周给你的一页纸</h4>
+        <ul>
+          <li><strong>Pipeline 快照</strong> — 线索 / 进行中 / 待你审批 / 本月亮收（你必看）</li>
+          <li><strong>本周进展</strong> — 每个在跑项目一句话</li>
+          <li><strong>待你决策</strong> — HITL + 接不接 + 资源冲突</li>
+          <li><strong>风险</strong> — 超期、超预算、客户满意度</li>
+          <li><strong>下周计划</strong> — 运营排期，CEO 确认</li>
+        </ul>
+      </div>
+      <div class="diagram-box">
+        <pre class="mermaid">
+flowchart LR
+  Ops[运营维护台账] --> CEO[CEO 抽取快照]
+  P[产品] --> CEO
+  L[法务] --> CEO
+  D[开发] --> CEO
+  CEO --> Page[一页纸周报]
+  Page --> You[你 Founder]
+  Ops --> Pipeline[Pipeline 明细]
+  Pipeline --> You
+        </pre>
+      </div>
+    </section>
+
+    <!-- 阶段规划 -->
+    <section id="roadmap">
+      <h2>下一步讨论（确认 v3 后再搭建）</h2>
+      <div class="card-grid">
+        <div class="card"><h4>1. 全景图是否准确？</h4><p>5 阶段 + PoC 分支 + 续费回路，是否覆盖你的生意？</p></div>
+        <div class="card"><h4>2. HITL 分级</h4><p>哪些必须你审？哪些 CEO 可代拟、你抽查？</p></div>
+        <div class="card"><h4>3. 周报格式</h4><p>一页纸是否够？Pipeline 你每周看完整版还是快照？</p></div>
+        <div class="card"><h4>4. CEO 搁置权</h4><p>高风险时 CEO 建议不接，你是否默认采纳 unless 你 override？</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>OPC 一人公司 · 业务全景讨论稿 v3 · 确认后再进入 Phase 0 文档与搭建</footer>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true, theme: 'dark',
+      flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis' },
+      themeVariables: {
+        primaryColor: '#1a1d27', primaryTextColor: '#e8eaef', primaryBorderColor: '#2e3345',
+        lineColor: '#5b8def', secondaryColor: '#242836', tertiaryColor: '#1a1d27',
+        clusterBkg: '#242836', clusterBorder: '#2e3345', titleColor: '#8b92a8'
+      }
+    });
+    document.getElementById('nav').addEventListener('click', e => {
+      if (e.target.tagName !== 'BUTTON') return;
+      const tab = e.target.dataset.tab;
+      document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      document.querySelectorAll('section').forEach(s => s.classList.toggle('active', s.id === tab));
+    });
+  </script>
+</body>
+</html>

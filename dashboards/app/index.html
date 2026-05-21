@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>OPC Studio</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"></div>
+
+  <header class="topbar glass">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <span id="company-name">OPC Studio</span>
+      </div>
+      <nav class="nav-pill glass-inner">
+        <button class="nav-item active" data-view="overview">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          <span>概览</span>
+        </button>
+        <button class="nav-item" data-view="projects">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
+          <span>项目</span>
+        </button>
+        <button class="nav-item" data-view="clients">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          <span>客户</span>
+        </button>
+        <button class="nav-item" data-view="inbox">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+          <span>收件箱</span>
+          <em class="nav-badge" id="inbox-badge">0</em>
+        </button>
+        <button class="nav-item" data-view="costs">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          <span>经营</span>
+        </button>
+        <button class="nav-item" data-view="weekly">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h2M8 17h2M16 13h2M16 17h2"/></svg>
+          <span>周报</span>
+          <em class="nav-badge" id="weekly-badge" hidden>1</em>
+        </button>
+      </nav>
+      <button class="settings-btn glass-inner" id="btn-settings" title="设置">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- 公司概览 -->
+    <section id="view-overview" class="view active">
+      <div class="pulse-bar glass" id="pulse-bar"></div>
+      <div class="overview-stage glass" id="overview-stage">
+        <svg class="collab-lines" id="collab-svg" aria-hidden="true"></svg>
+        <div class="role-nodes" id="role-nodes"></div>
+      </div>
+      <p class="hint">点击成员查看详情 · 连线表示正在协作同一项目</p>
+    </section>
+
+    <!-- 项目看板 -->
+    <section id="view-projects" class="view">
+      <div class="stats-row" id="stats-row"></div>
+      <div class="projects-grid" id="projects-grid"></div>
+    </section>
+
+    <!-- 客户档案 -->
+    <section id="view-clients" class="view">
+      <div id="clients-root"></div>
+    </section>
+
+    <!-- 收件箱：必读 + 请示 + 审批 -->
+    <section id="view-inbox" class="view">
+      <div class="inbox-filters" id="inbox-filters"></div>
+      <div class="inbox-list" id="inbox-list"></div>
+    </section>
+
+    <!-- 经营：成本 + 收入毛利 -->
+    <section id="view-costs" class="view">
+      <div id="costs-root"></div>
+    </section>
+
+    <!-- CEO 周报 -->
+    <section id="view-weekly" class="view">
+      <div id="weekly-root"></div>
+    </section>
+  </main>
+
+  <!-- CEO 通道 FAB -->
+  <button class="fab glass" id="fab-ceo" title="CEO 办公室">
+    <img src="../../assets/avatars/ceo.png" alt="CEO"/>
+  </button>
+
+  <!-- 通用弹窗 -->
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal glass" id="modal-panel" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modal-close" aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- 项目工作室（全屏） -->
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden>
+    <div class="sheet glass" id="workroom-sheet">
+      <header class="sheet-head">
+        <button class="back-btn" id="sheet-close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="sheet-title" id="sheet-title"></div>
+        <div class="sheet-progress" id="sheet-progress"></div>
+        <div class="export-bar" id="export-bar"></div>
+      </header>
+      <div class="workroom">
+        <aside class="workroom-nav glass-inner" id="workroom-nav"></aside>
+        <div class="workroom-main">
+          <div class="workroom-finance" id="workroom-finance" hidden></div>
+          <div class="closure-panel glass-inner" id="closure-panel" hidden></div>
+          <article class="workroom-content glass-inner" id="workroom-content"></article>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,802 @@
+{
+  "meta": {
+    "version": "0.3.0",
+    "updatedAt": "2026-05-21T14:00:00+08:00",
+    "company": "OPC Studio",
+    "tagline": "一人公司 · Agent 交付工作室"
+  },
+  "pulse": {
+    "activeProjects": 2,
+    "hitlPending": 1,
+    "alerts": 1,
+    "leads": 5
+  },
+  "stats": {
+    "leads": { "label": "线索", "value": 3, "filter": "lead" },
+    "active": { "label": "进行中", "value": 2, "filter": "active" },
+    "clarify": { "label": "待澄清", "value": 1, "filter": "clarify" },
+    "hitl": { "label": "待审批", "value": 1, "filter": "hitl" },
+    "done": { "label": "已交付", "value": 1, "filter": "done" }
+  },
+  "roles": [
+    {
+      "id": "ceo",
+      "name": "沈策",
+      "title": "首席运营官 · AI",
+      "department": "管理层",
+      "charter": "需求评估、立项判断、内部调度、异常升级、周报汇总",
+      "avatar": "../../assets/avatars/ceo.png",
+      "workStatus": "working",
+      "load": { "current": 2, "max": 3 },
+      "focus": "评估 Beta 贸易发票 Agent 立项风险，汇总 Acme 交付状态",
+      "projectIds": ["proj-acme", "proj-beta"],
+      "runningCount": 2,
+      "pendingCount": 1,
+      "weeklyHours": { "planned": 32, "actual": 18.5 },
+      "lastActiveAt": "2026-05-21T11:52:00+08:00",
+      "extras": {
+        "decisionQueue": ["Beta 是否先做 PoC 再报价", "Acme HITL-3 是否今日呈报"],
+        "riskAlerts": 1,
+        "reportStatus": "本周周报草稿已就绪，待周五发送"
+      }
+    },
+    {
+      "id": "product",
+      "name": "林知",
+      "title": "产品经理 · AI",
+      "department": "产品部",
+      "charter": "需求结构化、PRD、验收标准、Rubric 设计",
+      "avatar": "../../assets/avatars/product.png",
+      "workStatus": "working",
+      "load": { "current": 1, "max": 2 },
+      "focus": "撰写 Acme 内部审批流 Agent PRD 与 HITL 卡点设计",
+      "projectIds": ["proj-acme"],
+      "runningCount": 1,
+      "pendingCount": 2,
+      "weeklyHours": { "planned": 28, "actual": 14 },
+      "lastActiveAt": "2026-05-21T11:48:00+08:00",
+      "extras": {
+        "prdProgress": "3/5 章节",
+        "openQuestions": 2
+      }
+    },
+    {
+      "id": "legal",
+      "name": "唐律",
+      "title": "财务法务顾问 · AI",
+      "department": "财务法务部",
+      "charter": "报价、合同/SOW、数据合规、收款跟踪",
+      "avatar": "../../assets/avatars/legal.png",
+      "workStatus": "idle",
+      "load": { "current": 0, "max": 2 },
+      "focus": "待命 — 待 Acme PRD 通过后出具报价",
+      "projectIds": ["proj-acme"],
+      "runningCount": 0,
+      "pendingCount": 2,
+      "weeklyHours": { "planned": 16, "actual": 6 },
+      "lastActiveAt": "2026-05-21T09:15:00+08:00",
+      "extras": {
+        "quotesPending": 1,
+        "complianceFlags": ["Acme 流程含员工个人信息 · 需数据处理附录"]
+      }
+    },
+    {
+      "id": "dev",
+      "name": "陈栈",
+      "title": "智能体工程师 · AI",
+      "department": "工程部",
+      "charter": "PoC、工作流编排、API 集成、自测与交付",
+      "avatar": "../../assets/avatars/dev.png",
+      "workStatus": "waiting",
+      "load": { "current": 1, "max": 2 },
+      "focus": "Acme 审批流 Agent 已开发完成，等待 Founder HITL-3 审交付物",
+      "projectIds": ["proj-acme", "proj-beta"],
+      "runningCount": 1,
+      "pendingCount": 1,
+      "weeklyHours": { "planned": 36, "actual": 22 },
+      "lastActiveAt": "2026-05-21T11:30:00+08:00",
+      "extras": {
+        "environment": "staging",
+        "selfTest": "4/5 通过",
+        "tokenUsageMock": "18.2k tokens"
+      }
+    },
+    {
+      "id": "ops",
+      "name": "苏行",
+      "title": "运营专员 · AI",
+      "department": "运营部",
+      "charter": "Pipeline 台账、排期、客户沟通草稿、内部验收清单",
+      "avatar": "../../assets/avatars/ops.png",
+      "workStatus": "working",
+      "load": { "current": 3, "max": 3 },
+      "focus": "维护全量线索台账，起草 Acme 交付进度客户邮件",
+      "projectIds": ["proj-acme", "proj-beta", "lead-catering"],
+      "runningCount": 2,
+      "pendingCount": 3,
+      "weeklyHours": { "planned": 24, "actual": 16.5 },
+      "lastActiveAt": "2026-05-21T11:55:00+08:00",
+      "extras": {
+        "pipelineChanges": "本周 +2 线索",
+        "draftsPending": 1
+      }
+    }
+  ],
+  "clients": [
+    {
+      "id": "client-acme",
+      "name": "Acme 科技",
+      "contact": "王总 · CTO",
+      "industry": "SaaS",
+      "status": "active",
+      "projectIds": ["proj-acme"],
+      "totalRevenue": 48000,
+      "received": 24000,
+      "notes": [
+        { "at": "2026-05-10", "text": "初次沟通：内部审批流自动化需求" },
+        { "at": "2026-05-18", "text": "确认 staging 演示时间" }
+      ]
+    },
+    {
+      "id": "client-beta",
+      "name": "Beta 贸易",
+      "contact": "李总 · 财务总监",
+      "industry": "贸易",
+      "status": "prospect",
+      "projectIds": ["proj-beta"],
+      "totalRevenue": 0,
+      "received": 0,
+      "notes": [{ "at": "2026-05-21", "text": "发票 OCR 需求，ERP 私有部署" }]
+    },
+    {
+      "id": "client-gamma",
+      "name": "Gamma 咨询",
+      "contact": "张合伙人",
+      "industry": "咨询",
+      "status": "renewal",
+      "projectIds": ["proj-gamma-done"],
+      "totalRevenue": 28000,
+      "received": 28000,
+      "notes": [{ "at": "2026-04-15", "text": "合同审阅 Agent 已交付，讨论续费" }]
+    },
+    {
+      "id": "client-catering",
+      "name": "味链餐饮",
+      "contact": "待联系",
+      "industry": "餐饮连锁",
+      "status": "lead",
+      "projectIds": ["lead-catering"],
+      "totalRevenue": 0,
+      "received": 0,
+      "notes": []
+    },
+    {
+      "id": "client-logistics",
+      "name": "速达物流",
+      "contact": "待联系",
+      "industry": "物流",
+      "status": "lead",
+      "projectIds": ["lead-logistics"],
+      "totalRevenue": 0,
+      "received": 0,
+      "notes": []
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj-acme",
+      "clientId": "client-acme",
+      "clientName": "Acme 科技",
+      "summary": "内部审批流 Agent：工单 intake → 分类 → 起草 → 人工审批 → 归档",
+      "agentDeliverable": "多 Agent 工作流 + 飞书/钉钉对接 + HITL 审批节点",
+      "pipelineColumn": "active",
+      "priority": "P1",
+      "stage": "阶段4 · 开发交付",
+      "progress": 78,
+      "assignees": ["ceo", "product", "dev", "ops"],
+      "hitlPending": "HITL-3",
+      "closureStatus": "awaiting_hitl",
+      "contractAmount": 48000
+    },
+    {
+      "id": "proj-beta",
+      "clientId": "client-beta",
+      "clientName": "Beta 贸易",
+      "summary": "发票 OCR Agent：扫描件 → 结构化 → 科目映射 → 记账草稿 → 会计复核",
+      "agentDeliverable": "OCR + 结构化 Agent + 财务科目映射 + ERP 导出草稿",
+      "pipelineColumn": "clarify",
+      "priority": "P1",
+      "stage": "阶段2 · 评估立项",
+      "progress": 22,
+      "assignees": ["ceo", "ops"],
+      "hitlPending": null
+    },
+    {
+      "id": "lead-catering",
+      "clientId": "client-catering",
+      "clientName": "味链餐饮（线索）",
+      "summary": "连锁门店发票汇总 + 供应商对账 Agent",
+      "agentDeliverable": "批量发票 OCR + 对账差异报告 + 月度汇总",
+      "pipelineColumn": "lead",
+      "priority": "P2",
+      "stage": "阶段1 · 线索",
+      "progress": 5,
+      "assignees": ["ops"],
+      "hitlPending": null
+    },
+    {
+      "id": "lead-logistics",
+      "clientId": "client-logistics",
+      "clientName": "速达物流（线索）",
+      "summary": "运单/回单 OCR + 异常件自动分类 Agent",
+      "agentDeliverable": "多模态 OCR + 分类路由 + 工单创建",
+      "pipelineColumn": "lead",
+      "priority": "P3",
+      "stage": "阶段1 · 线索",
+      "progress": 0,
+      "assignees": ["ops"],
+      "hitlPending": null
+    },
+    {
+      "id": "proj-gamma-done",
+      "clientId": "client-gamma",
+      "clientName": "Gamma 咨询",
+      "summary": "合同审阅 Agent：上传合同 → 风险条款标注 → 修订建议",
+      "agentDeliverable": "RAG 合规模板 + 条款风险评分 + 修订草案",
+      "pipelineColumn": "done",
+      "priority": "P2",
+      "stage": "阶段5 · 已交付待续费",
+      "progress": 100,
+      "assignees": ["ceo", "legal", "dev"],
+      "hitlPending": null
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-ceo-1",
+      "roleId": "ceo",
+      "title": "Beta 贸易发票 Agent 立项风险评估",
+      "projectId": "proj-beta",
+      "stage": "阶段2 · 评估立项",
+      "status": "running",
+      "priority": "P0",
+      "startedAt": "2026-05-21T10:00:00+08:00",
+      "elapsed": "1h 52m",
+      "progress": 70,
+      "progressNote": "7 项必填已齐；正在评估 OCR 准确率预期与 ERP 对接风险",
+      "dueAt": "2026-05-21T14:00:00+08:00",
+      "activities": [
+        { "at": "2026-05-21T10:00:00+08:00", "message": "收到 Founder 转述 Beta 需求纪要" },
+        { "at": "2026-05-21T10:30:00+08:00", "message": "请求运营登记 Pipeline 并排期" },
+        { "at": "2026-05-21T11:20:00+08:00", "message": "识别风险：客户 ERP 为私有部署，需 PoC 验证导出格式" }
+      ]
+    },
+    {
+      "id": "task-ceo-2",
+      "roleId": "ceo",
+      "title": "打包 Acme HITL-3 交付物呈报 Founder",
+      "projectId": "proj-acme",
+      "stage": "阶段4 · 开发交付",
+      "status": "pending",
+      "priority": "P0",
+      "dependsOn": ["task-dev-1"],
+      "dueAt": "2026-05-21T16:00:00+08:00",
+      "activities": []
+    },
+    {
+      "id": "task-product-1",
+      "roleId": "product",
+      "title": "撰写 Acme 内部审批流 Agent PRD",
+      "projectId": "proj-acme",
+      "stage": "阶段3 · 方案签约",
+      "status": "running",
+      "priority": "P0",
+      "startedAt": "2026-05-21T09:32:00+08:00",
+      "elapsed": "2h 20m",
+      "progress": 60,
+      "progressNote": "背景、目标、Agent 角色分工已完成；正在写验收标准与 HITL 卡点",
+      "outputRef": "clients/acme/handoffs/prd-draft.md",
+      "dueAt": "2026-05-21T18:00:00+08:00",
+      "activities": [
+        { "at": "2026-05-21T09:32:00+08:00", "message": "CEO 调度：Acme PRD 启动" },
+        { "at": "2026-05-21T10:15:00+08:00", "message": "完成章节：业务背景与 Agent 拓扑" },
+        { "at": "2026-05-21T11:00:00+08:00", "message": "定义 3 个 HITL 卡点：分类确认、起草审核、归档批准" }
+      ]
+    },
+    {
+      "id": "task-product-2",
+      "roleId": "product",
+      "title": "Beta 发票 Agent 需求结构化（待 CEO 立项）",
+      "projectId": "proj-beta",
+      "stage": "阶段2 · 评估立项",
+      "status": "pending",
+      "priority": "P1",
+      "dependsOn": ["task-ceo-1"],
+      "activities": []
+    },
+    {
+      "id": "task-legal-1",
+      "roleId": "legal",
+      "title": "Acme 项目报价与 SOW 草案",
+      "projectId": "proj-acme",
+      "stage": "阶段3 · 方案签约",
+      "status": "pending",
+      "priority": "P1",
+      "dependsOn": ["task-product-1"],
+      "waitingOn": "product",
+      "activities": []
+    },
+    {
+      "id": "task-legal-2",
+      "roleId": "legal",
+      "title": "Acme 数据处理附录（PII 合规）",
+      "projectId": "proj-acme",
+      "stage": "阶段3 · 方案签约",
+      "status": "pending",
+      "priority": "P2",
+      "activities": []
+    },
+    {
+      "id": "task-dev-1",
+      "roleId": "dev",
+      "title": "Acme 审批流 Agent staging 交付与自测",
+      "projectId": "proj-acme",
+      "stage": "阶段4 · 开发交付",
+      "status": "running",
+      "priority": "P0",
+      "startedAt": "2026-05-19T14:00:00+08:00",
+      "elapsed": "2d 4h",
+      "progress": 95,
+      "progressNote": "工作流 5 节点已通；自测 4/5；待 Founder HITL-3",
+      "blockedReason": null,
+      "waitingOn": "founder",
+      "outputRef": "clients/acme/deliverables/workflow-v0.9/",
+      "dueAt": "2026-05-21T12:00:00+08:00",
+      "activities": [
+        { "at": "2026-05-20T16:00:00+08:00", "message": "完成 intake + 分类 Agent 联调" },
+        { "at": "2026-05-21T09:00:00+08:00", "message": "接入客户飞书审批回调（staging）" },
+        { "at": "2026-05-21T11:30:00+08:00", "message": "自测通过 4/5；提交 CEO 打包 HITL-3" }
+      ]
+    },
+    {
+      "id": "task-dev-2",
+      "roleId": "dev",
+      "title": "Beta 发票 OCR PoC（待立项后启动）",
+      "projectId": "proj-beta",
+      "stage": "阶段3 · 方案签约",
+      "status": "pending",
+      "priority": "P1",
+      "dependsOn": ["task-ceo-1"],
+      "activities": []
+    },
+    {
+      "id": "task-ops-1",
+      "roleId": "ops",
+      "title": "更新全量 Pipeline 台账与优先级",
+      "projectId": "proj-beta",
+      "stage": "全程并行",
+      "status": "running",
+      "priority": "P1",
+      "startedAt": "2026-05-21T08:30:00+08:00",
+      "elapsed": "3h 25m",
+      "progress": 80,
+      "progressNote": "本周新增 2 线索已入库；Acme/Beta 排期已同步 CEO",
+      "activities": [
+        { "at": "2026-05-21T08:30:00+08:00", "message": "日更 Pipeline 启动" },
+        { "at": "2026-05-21T10:00:00+08:00", "message": "味链餐饮、速达物流录入线索池" }
+      ]
+    },
+    {
+      "id": "task-ops-2",
+      "roleId": "ops",
+      "title": "起草 Acme 交付进度客户邮件",
+      "projectId": "proj-acme",
+      "stage": "阶段4 · 开发交付",
+      "status": "running",
+      "priority": "P0",
+      "startedAt": "2026-05-21T11:00:00+08:00",
+      "elapsed": "55m",
+      "progress": 40,
+      "progressNote": "初稿完成，待 CEO 汇总后提请 HITL-4",
+      "activities": [
+        { "at": "2026-05-21T11:00:00+08:00", "message": "开始起草交付进度说明" }
+      ]
+    },
+    {
+      "id": "task-ops-3",
+      "roleId": "ops",
+      "title": "Acme 内部验收清单核对",
+      "projectId": "proj-acme",
+      "stage": "阶段4 · 开发交付",
+      "status": "pending",
+      "priority": "P1",
+      "dependsOn": ["task-dev-1"],
+      "activities": []
+    }
+  ],
+  "hitlQueue": [
+    {
+      "id": "hitl-3-acme",
+      "type": "HITL-3",
+      "projectId": "proj-acme",
+      "title": "审 Acme 审批流 Agent 交付物",
+      "summary": "staging 环境可演示：工单 intake → 分类 → 起草 → 人工审批 → 归档。自测 4/5 通过。",
+      "submittedBy": "ceo",
+      "submittedAt": "2026-05-21T11:35:00+08:00",
+      "artifacts": [
+        "clients/acme/deliverables/workflow-v0.9/",
+        "clients/acme/deliverables/self-test-report.md"
+      ]
+    }
+  ],
+  "alerts": [
+    {
+      "id": "alert-1",
+      "level": "warning",
+      "message": "Beta 项目：客户 ERP 私有部署，CEO 建议先做 2 周 PoC 再正式报价",
+      "projectId": "proj-beta",
+      "roleId": "ceo"
+    }
+  ],
+  "channels": {
+    "feishu": {
+      "connected": true,
+      "label": "飞书",
+      "botName": "@CEO沈策",
+      "lastSyncAt": "2026-05-21T11:50:00+08:00"
+    },
+    "wechat": {
+      "connected": true,
+      "label": "微信",
+      "botName": "CEO 助手（企业微信）",
+      "lastSyncAt": "2026-05-21T09:20:00+08:00"
+    },
+    "web": { "connected": true, "label": "Web", "botName": "本看板" }
+  },
+  "artifacts": [
+    {
+      "id": "art-prd-acme",
+      "projectId": "proj-acme",
+      "type": "prd",
+      "icon": "doc",
+      "title": "PRD v0.6",
+      "version": "0.6",
+      "roleId": "product",
+      "updatedAt": "2026-05-21T11:00:00+08:00",
+      "content": "# Acme 内部审批流 Agent\n\n## 目标\n将工单 intake → 分类 → 起草 → 人工审批 → 归档 自动化，HITL 保留在起草与归档节点。\n\n## Agent 拓扑\n1. **Intake Agent** — 解析飞书消息/表单\n2. **Classifier** — 费用/人事/IT 三类\n3. **Drafter** — 按模板生成审批草稿\n4. **Archiver** — 通过后写入档案库\n\n## 验收标准\n- [ ] 分类准确率 ≥ 90%（100 条样本）\n- [ ] 单工单处理 < 30s\n- [ ] 飞书 staging 回调联通"
+    },
+    {
+      "id": "art-demo-acme",
+      "projectId": "proj-acme",
+      "type": "demo",
+      "icon": "link",
+      "title": "Workflow Demo v0.9",
+      "version": "0.9",
+      "roleId": "dev",
+      "demoUrl": "https://staging.example.com/acme/workflow",
+      "updatedAt": "2026-05-21T11:30:00+08:00",
+      "content": "## Staging 演示\n\n**URL:** `https://staging.example.com/acme/workflow`\n\n**自测:** 4/5 通过\n\n- ✅ Intake → Classify\n- ✅ Classify → Draft\n- ✅ Draft → HITL\n- ✅ HITL → Archive\n- ⏳ 飞书生产回调（待 HITL-3）"
+    },
+    {
+      "id": "art-email-acme",
+      "projectId": "proj-acme",
+      "type": "email",
+      "icon": "mail",
+      "title": "客户进度邮件草稿",
+      "roleId": "ops",
+      "updatedAt": "2026-05-21T11:00:00+08:00",
+      "content": "Subject: Acme 审批流 Agent — 阶段进展\n\n王总您好，\n\nstaging 环境已完成 5 节点联调，计划本周安排 30 分钟演示。请确认周三下午是否方便。\n\n— Simon"
+    },
+    {
+      "id": "art-memo-beta",
+      "projectId": "proj-beta",
+      "type": "memo",
+      "icon": "doc",
+      "title": "CEO 立项风险评估",
+      "roleId": "ceo",
+      "updatedAt": "2026-05-21T11:20:00+08:00",
+      "content": "# Beta 发票 Agent · 风险备忘\n\n**靠谱度:** 高 — 客户有明确痛点与样本发票\n\n**主要风险:**\n- ERP 私有部署，导出格式未知 → **建议 2 周 PoC**\n- 增值税专票 OCR 需单独验证\n\n**CEO 建议:** 先 PoC，再报价 ¥8–12 万区间"
+    }
+  ],
+  "inbox": [
+    {
+      "id": "inbox-weekly-1",
+      "category": "must_read",
+      "from": "ceo",
+      "channel": "feishu",
+      "title": "W20 周报草稿 · 请过目",
+      "preview": "Pipeline 5 项 · 2 个待决 · Acme HITL-3 今日需批",
+      "projectId": null,
+      "weeklyReportId": "2026-W20",
+      "at": "2026-05-21T14:00:00+08:00",
+      "read": false,
+      "status": "active"
+    },
+    {
+      "id": "inbox-must-1",
+      "category": "must_read",
+      "from": "ceo",
+      "channel": "feishu",
+      "title": "请过目 Acme PRD 后再批交付物",
+      "preview": "PRD 与交付 scope 已对齐，建议先读 PRD 第 3 节 HITL 设计",
+      "projectId": "proj-acme",
+      "artifactId": "art-prd-acme",
+      "at": "2026-05-21T11:40:00+08:00",
+      "read": false,
+      "status": "active"
+    },
+    {
+      "id": "inbox-req-1",
+      "category": "request",
+      "from": "ceo",
+      "channel": "web",
+      "title": "Beta 是否先做 PoC？",
+      "preview": "CEO 建议 PoC 2 周 · 再报价 · 请拍板",
+      "projectId": "proj-beta",
+      "artifactId": "art-memo-beta",
+      "at": "2026-05-21T11:25:00+08:00",
+      "read": false,
+      "status": "active",
+      "actions": ["approve_poc", "reject", "discuss"]
+    },
+    {
+      "id": "inbox-hitl-1",
+      "category": "approval",
+      "from": "ceo",
+      "channel": "web",
+      "title": "HITL-3 · Acme 交付物",
+      "preview": "staging 可演示 · 自测 4/5",
+      "projectId": "proj-acme",
+      "hitlId": "hitl-3-acme",
+      "artifactId": "art-demo-acme",
+      "at": "2026-05-21T11:35:00+08:00",
+      "read": false,
+      "status": "active"
+    },
+    {
+      "id": "inbox-done-1",
+      "category": "approval",
+      "from": "ceo",
+      "channel": "web",
+      "title": "HITL-1 · Gamma 合同审阅 PRD",
+      "preview": "已批准 · 2026-04-10",
+      "projectId": "proj-gamma-done",
+      "at": "2026-04-10T15:00:00+08:00",
+      "read": true,
+      "status": "done",
+      "resolvedAt": "2026-04-10T15:20:00+08:00",
+      "resolution": "approved"
+    },
+    {
+      "id": "inbox-arch-1",
+      "category": "must_read",
+      "from": "ceo",
+      "channel": "feishu",
+      "title": "Gamma 结项汇报（归档）",
+      "preview": "交付包已发送客户 · 收款 ¥28,000",
+      "projectId": "proj-gamma-done",
+      "at": "2026-04-20T10:00:00+08:00",
+      "read": true,
+      "status": "archived"
+    }
+  ],
+  "rejectHistory": [
+    {
+      "id": "rej-1",
+      "hitlId": "hitl-2-acme-mock",
+      "projectId": "proj-acme",
+      "type": "HITL-2",
+      "note": "报价区间需下调 10%，补充 PoC 条款",
+      "at": "2026-05-08T14:30:00+08:00"
+    }
+  ],
+  "closure": {
+    "proj-acme": {
+      "status": "awaiting_hitl",
+      "checklist": [
+        { "id": "cl-1", "label": "开发自测报告", "done": true, "roleId": "dev" },
+        { "id": "cl-2", "label": "运营内部验收清单", "done": false, "roleId": "ops" },
+        { "id": "cl-3", "label": "Founder HITL-3 批准", "done": false, "roleId": "ceo" },
+        { "id": "cl-4", "label": "客户交付 ZIP 打包", "done": false, "roleId": "ops" },
+        { "id": "cl-5", "label": "对外进度邮件 HITL-4", "done": false, "roleId": "ops" }
+      ]
+    },
+    "proj-gamma-done": {
+      "status": "closed",
+      "closedAt": "2026-04-20",
+      "checklist": [
+        { "id": "cl-g1", "label": "交付物验收", "done": true, "roleId": "dev" },
+        { "id": "cl-g2", "label": "HITL-3 批准", "done": true, "roleId": "ceo" },
+        { "id": "cl-g3", "label": "客户 ZIP 发送", "done": true, "roleId": "ops" },
+        { "id": "cl-g4", "label": "收款确认", "done": true, "roleId": "legal" }
+      ]
+    }
+  },
+  "payments": [
+    { "id": "pay-1", "clientId": "client-acme", "projectId": "proj-acme", "amount": 24000, "label": "首款 50%", "status": "received", "at": "2026-05-01" },
+    { "id": "pay-2", "clientId": "client-acme", "projectId": "proj-acme", "amount": 24000, "label": "尾款 50%", "status": "pending", "at": null },
+    { "id": "pay-3", "clientId": "client-gamma", "projectId": "proj-gamma-done", "amount": 28000, "label": "全款", "status": "received", "at": "2026-04-18" }
+  ],
+  "weeklyReport": {
+    "week": "2026-W20",
+    "period": "2026-05-19 ~ 2026-05-25",
+    "status": "draft",
+    "generatedAt": "2026-05-21T14:00:00+08:00",
+    "author": "ceo",
+    "summary": "Acme 进入 HITL-3 交付审批；Beta 评估 PoC 路径；Pipeline +2 线索。",
+    "pipelineSnapshot": [
+      { "projectId": "proj-acme", "label": "Acme 审批流", "stage": "开发交付", "progress": 78, "note": "HITL-3 待批" },
+      { "projectId": "proj-beta", "label": "Beta 发票 OCR", "stage": "评估立项", "progress": 22, "note": "待 PoC 拍板" },
+      { "projectId": "proj-gamma-done", "label": "Gamma 合同审阅", "stage": "已交付", "progress": 100, "note": "续费跟进" },
+      { "projectId": "lead-catering", "label": "味链餐饮", "stage": "线索", "progress": 5, "note": "待 qualification" },
+      { "projectId": "lead-logistics", "label": "速达物流", "stage": "线索", "progress": 0, "note": "待 qualification" }
+    ],
+    "pendingDecisions": [
+      { "id": "dec-1", "title": "Acme HITL-3 交付物是否批准", "projectId": "proj-acme", "urgency": "today" },
+      { "id": "dec-2", "title": "Beta 是否先做 2 周 PoC 再报价", "projectId": "proj-beta", "urgency": "this_week" }
+    ],
+    "financeSnapshot": {
+      "revenue": 76000,
+      "received": 52000,
+      "cost": 2840,
+      "margin": 73160,
+      "marginPct": 96.3
+    },
+    "sections": [
+      { "title": "本周摘要", "content": "Acme 审批流 Agent staging 完成，等待 Founder 批交付物。Beta 发票 Agent 完成立项评估，建议 2 周 PoC。Gamma 进入续费沟通。" },
+      { "title": "项目进展", "content": "**Acme** 78% → HITL-3 待批\n**Beta** 22% → 待澄清预算与 ERP 样本\n**Gamma** 已交付，续费跟进中" },
+      { "title": "风险与决策", "content": "Beta ERP 私有部署风险中高；CEO 建议 PoC 后再报价 ¥8–12 万。" },
+      { "title": "下周计划", "content": "1. Acme 结项与客户交付\n2. Beta PoC 启动（待拍板）\n3. 味链/速达线索 qualification" }
+    ],
+    "roleHighlights": [
+      { "roleId": "ceo", "text": "完成 Beta 风险评估；打包 Acme HITL-3" },
+      { "roleId": "product", "text": "Acme PRD v0.6 完成 60%" },
+      { "roleId": "dev", "text": "Acme staging 自测 4/5" },
+      { "roleId": "ops", "text": "Pipeline +2；起草 Acme 客户邮件" },
+      { "roleId": "legal", "text": "待命 Acme SOW" }
+    ]
+  },
+  "rolePerformance": [
+    { "roleId": "ceo", "tasksCompleted": 4, "tasksRunning": 2, "hoursActual": 18.5, "hoursPlanned": 32, "outputScore": 92 },
+    { "roleId": "product", "tasksCompleted": 2, "tasksRunning": 1, "hoursActual": 14, "hoursPlanned": 28, "outputScore": 85 },
+    { "roleId": "legal", "tasksCompleted": 1, "tasksRunning": 0, "hoursActual": 6, "hoursPlanned": 16, "outputScore": 78 },
+    { "roleId": "dev", "tasksCompleted": 3, "tasksRunning": 1, "hoursActual": 22, "hoursPlanned": 36, "outputScore": 94 },
+    { "roleId": "ops", "tasksCompleted": 5, "tasksRunning": 2, "hoursActual": 16.5, "hoursPlanned": 24, "outputScore": 88 }
+  ],
+  "ceoThread": [
+    {
+      "id": "thread-1",
+      "direction": "founder_to_ceo",
+      "channel": "feishu",
+      "text": "Beta 贸易王总想要发票 OCR 自动记账，有 200 张/sample，ERP 私有部署，预算还没谈。",
+      "at": "2026-05-21T09:45:00+08:00"
+    },
+    {
+      "id": "thread-2",
+      "direction": "ceo_to_founder",
+      "channel": "feishu",
+      "type": "analysis",
+      "text": "已登记 Pipeline。7 项必填差「预算区间」和「验收标准」。另：ERP 对接风险中高，建议 PoC。",
+      "at": "2026-05-21T10:15:00+08:00"
+    },
+    {
+      "id": "thread-3",
+      "direction": "founder_to_ceo",
+      "channel": "wechat",
+      "text": "预算大概 8-10 万，验收按 OCR 字段准确率 95%。可以先 PoC。",
+      "at": "2026-05-21T10:40:00+08:00"
+    },
+    {
+      "id": "thread-4",
+      "direction": "ceo_to_founder",
+      "channel": "feishu",
+      "type": "decision",
+      "text": "收到。判断：可立项，走 PoC 分支。已调度开发准备样本测试，法务待命。",
+      "at": "2026-05-21T11:10:00+08:00"
+    }
+  ],
+  "costs": {
+    "period": "2026-05",
+    "currency": "CNY",
+    "summary": {
+      "totalCost": 2840,
+      "totalTokens": 892000,
+      "revenue": 76000,
+      "received": 52000,
+      "pending": 24000,
+      "margin": 73160,
+      "marginPct": 96.3,
+      "budgetRemaining": 7160,
+      "monthlyBudget": 10000,
+      "budgetAlert": false,
+      "budgetAlertMessage": null
+    },
+    "byRole": [
+      { "roleId": "dev", "tokens": 412000, "cost": 1320, "runs": 86, "model": "claude-sonnet", "sharePct": 46.5 },
+      { "roleId": "ceo", "tokens": 125000, "cost": 520, "runs": 48, "model": "gpt-4o", "sharePct": 18.3 },
+      { "roleId": "product", "tokens": 98000, "cost": 380, "runs": 32, "model": "gpt-4o", "sharePct": 13.4 },
+      { "roleId": "ops", "tokens": 72000, "cost": 210, "runs": 54, "model": "gpt-4o-mini", "sharePct": 7.4 },
+      { "roleId": "legal", "tokens": 185000, "cost": 410, "runs": 18, "model": "gpt-4o", "sharePct": 14.4 }
+    ],
+    "byProject": [
+      {
+        "projectId": "proj-acme",
+        "tokens": 520000,
+        "cost": 1680,
+        "sharePct": 59.2,
+        "revenue": 48000,
+        "received": 24000,
+        "pending": 24000,
+        "margin": 46320,
+        "marginPct": 96.5,
+        "health": "healthy",
+        "note": "按合同口径盈利；已收款项覆盖 Token 成本约 14 倍"
+      },
+      {
+        "projectId": "proj-gamma-done",
+        "tokens": 210000,
+        "cost": 540,
+        "sharePct": 19.0,
+        "revenue": 28000,
+        "received": 28000,
+        "pending": 0,
+        "margin": 27460,
+        "marginPct": 98.1,
+        "health": "strong",
+        "note": "已结项 · 全款到账 · 可作为定价基准"
+      },
+      {
+        "projectId": "proj-beta",
+        "tokens": 98000,
+        "cost": 320,
+        "sharePct": 11.3,
+        "revenue": 0,
+        "received": 0,
+        "pending": 0,
+        "quoted": 100000,
+        "margin": -320,
+        "marginPct": null,
+        "health": "watch",
+        "note": "PoC 评估阶段未签约 · CEO 建议控制 PoC Token 上限 ¥800"
+      },
+      {
+        "projectId": "lead-catering",
+        "tokens": 12000,
+        "cost": 45,
+        "sharePct": 1.6,
+        "revenue": 0,
+        "received": 0,
+        "margin": -45,
+        "marginPct": null,
+        "health": "pipeline",
+        "note": "线索阶段 · 仅运营登记成本"
+      },
+      {
+        "projectId": "lead-logistics",
+        "tokens": 8000,
+        "cost": 30,
+        "sharePct": 1.1,
+        "revenue": 0,
+        "received": 0,
+        "margin": -30,
+        "marginPct": null,
+        "health": "pipeline",
+        "note": "线索阶段 · 尚未投入开发"
+      },
+      { "projectId": "_internal", "tokens": 64000, "cost": 300, "sharePct": 10.5, "label": "内部运营" }
+    ],
+    "weekly": [
+      { "week": "W17", "cost": 520 },
+      { "week": "W18", "cost": 680 },
+      { "week": "W19", "cost": 740 },
+      { "week": "W20", "cost": 900 }
+    ]
+  },
+  "roleConfig": [
+    { "roleId": "ceo", "model": "gpt-4o", "apiProvider": "OpenRouter", "monthlyBudget": 800, "tools": ["pipeline", "dispatch", "report"] },
+    { "roleId": "product", "model": "gpt-4o", "apiProvider": "OpenRouter", "monthlyBudget": 600, "tools": ["docs", "templates"] },
+    { "roleId": "legal", "model": "gpt-4o", "apiProvider": "OpenRouter", "monthlyBudget": 400, "tools": ["contracts", "compliance"] },
+    { "roleId": "dev", "model": "claude-sonnet", "apiProvider": "OpenRouter", "monthlyBudget": 2000, "tools": ["code", "ocr", "workflow"] },
+    { "roleId": "ops", "model": "gpt-4o-mini", "apiProvider": "OpenRouter", "monthlyBudget": 300, "tools": ["pipeline", "email-draft"] }
+  ]
+}

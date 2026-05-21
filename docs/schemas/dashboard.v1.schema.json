@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opc.local/schemas/dashboard.v1.json",
+  "title": "OPCDashboard",
+  "description": "GET /api/v1/dashboard 响应契约 · 黄金样本见 mock/dashboard.json",
+  "type": "object",
+  "required": [
+    "meta", "pulse", "stats", "roles", "clients", "projects", "tasks",
+    "hitlQueue", "alerts", "channels", "artifacts", "inbox", "rejectHistory",
+    "closure", "payments", "weeklyReport", "rolePerformance", "ceoThread",
+    "costs", "roleConfig"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["version", "updatedAt", "company"],
+      "properties": {
+        "version": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "company": { "type": "string" },
+        "tagline": { "type": "string" }
+      }
+    },
+    "pulse": {
+      "type": "object",
+      "required": ["activeProjects", "hitlPending", "alerts", "leads"],
+      "properties": {
+        "activeProjects": { "type": "integer" },
+        "hitlPending": { "type": "integer" },
+        "alerts": { "type": "integer" },
+        "leads": { "type": "integer" }
+      }
+    },
+    "stats": { "type": "object" },
+    "roles": { "type": "array" },
+    "clients": { "type": "array" },
+    "projects": { "type": "array" },
+    "tasks": { "type": "array" },
+    "hitlQueue": { "type": "array" },
+    "alerts": { "type": "array" },
+    "channels": { "type": "object" },
+    "artifacts": { "type": "array" },
+    "inbox": { "type": "array" },
+    "rejectHistory": { "type": "array" },
+    "closure": { "type": "object" },
+    "payments": { "type": "array" },
+    "weeklyReport": { "type": "object" },
+    "rolePerformance": { "type": "array" },
+    "ceoThread": { "type": "array" },
+    "costs": { "type": "object" },
+    "roleConfig": { "type": "array" }
+  },
+  "additionalProperties": false
+}
