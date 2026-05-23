@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.services.dispatch_feed import bootstrap_dispatch_feed
+from app.presentation.weekly import sync_weekly_reports
 
 
 def normalize_dashboard_domains(dashboard: dict[str, Any]) -> None:
@@ -18,6 +19,7 @@ def normalize_dashboard_domains(dashboard: dict[str, Any]) -> None:
     meta.setdefault("lastWorkflowRun", None)
     meta.setdefault("orchestrationActive", False)
     bootstrap_dispatch_feed(dashboard)
+    sync_weekly_reports(dashboard)
 
 
 def _default_founder_profile() -> dict[str, Any]:

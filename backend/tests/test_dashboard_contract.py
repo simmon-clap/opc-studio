@@ -8,4 +8,4 @@ def test_dashboard_contract(client):
     assert body["ok"] is True
     data = body["data"]
     assert set(data.keys()) == GOLDEN_TOP_LEVEL_KEYS
-    assert len(GOLDEN_TOP_LEVEL_KEYS) == 28
+    assert len(GOLDEN_TOP_LEVEL_KEYS) == 29

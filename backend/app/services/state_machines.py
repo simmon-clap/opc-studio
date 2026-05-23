@@ -213,15 +213,20 @@ def submit_ceo_brief(dashboard: dict[str, Any], text: str) -> dict[str, Any]:
 
 
 def send_weekly(dashboard: dict[str, Any]) -> dict[str, Any]:
-    weekly = dashboard.get("weeklyReport")
+    from app.presentation.weekly import get_current_weekly_report, sync_weekly_reports
+
+    sync_weekly_reports(dashboard)
+    weekly = get_current_weekly_report(dashboard)
     if weekly is None:
         raise ValueError("WEEKLY_NOT_FOUND")
     if weekly.get("status") == "sent":
         raise ValueError("WEEKLY_ALREADY_SENT")
 
     weekly["status"] = "sent"
+    report_id = weekly.get("id") or weekly.get("week")
     for item in dashboard.get("inbox", []):
-        if item.get("weeklyReportId"):
+        wid = item.get("weeklyReportId")
+        if wid and (wid == report_id or wid == weekly.get("week")):
             item["read"] = True
             item["status"] = "done"
 
@@ -231,7 +236,8 @@ def send_weekly(dashboard: dict[str, Any]) -> dict[str, Any]:
             extras["reportStatus"] = "本周周报已发送"
             break
 
-    return {"weeklyReport": weekly}
+    sync_weekly_reports(dashboard)
+    return {"weeklyReport": weekly, "weeklyReports": dashboard.get("weeklyReports")}
 
 
 def patch_closure_checklist(

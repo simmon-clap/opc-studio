@@ -135,8 +135,11 @@ async function handlePulseStream(payload) {
   lastSyncAt = Date.now();
   applyBrandMeta();
 
+  const weeklyInteractive = typeof isWeeklyUiInteractive === "function" && isWeeklyUiInteractive();
   const view = getActiveViewId();
-  if (needPresentation && view === "overview") {
+  if (weeklyInteractive) {
+    updateBadges();
+  } else if (needPresentation && view === "overview") {
     renderOverview();
   } else if (needPresentation || needInbox) {
     renderActiveView();
@@ -206,7 +209,12 @@ async function tickLiveSync() {
     await refreshDashboard();
     lastSyncAt = Date.now();
     applyBrandMeta();
-    renderActiveView();
+    const weeklyInteractive = typeof isWeeklyUiInteractive === "function" && isWeeklyUiInteractive();
+    if (weeklyInteractive) {
+      updateBadges();
+    } else {
+      renderActiveView();
+    }
     if (openRoleId && !document.getElementById("modal-backdrop").hidden) {
       renderRoleModal(openRoleId);
     }
@@ -272,7 +280,8 @@ function updateBadges() {
   document.getElementById("inbox-badge").textContent = unread;
   const weeklyBadge = document.getElementById("weekly-badge");
   if (weeklyBadge) {
-    const draft = data.weeklyReport?.status === "draft";
+    const draft = (data.weeklyReports || []).some((r) => r.status === "draft")
+      || data.weeklyReport?.status === "draft";
     weeklyBadge.hidden = !draft;
     weeklyBadge.textContent = draft ? "1" : "0";
   }
@@ -349,6 +358,9 @@ function closeModal() {
   backdrop.classList.remove("modal-stacked");
   document.body.style.overflow = document.getElementById("sheet-backdrop")?.hidden ? "" : "hidden";
   openRoleId = null;
+  if (typeof weeklyDetailId !== "undefined") weeklyDetailId = null;
+  const closeBtn = document.getElementById("modal-close");
+  if (closeBtn) closeBtn.hidden = false;
 }
 
 function openSheet() {
@@ -1334,16 +1346,9 @@ async function openInboxItem(id) {
   }
 
   if (item.weeklyReportId || item.title.includes("周报")) {
-    openModal(`
-      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">${channelBadge(item.channel)}<span class="cat-badge">必读</span></div>
-      <h2 style="font-size:1.05rem;font-weight:700">${item.title}</h2>
-      <p style="font-size:0.82rem;color:var(--text2);margin:0.5rem 0 1rem;line-height:1.5">${item.preview}</p>
-      <div class="weekly-preview glass-inner">${data.weeklyReport?.summary || ""}</div>
-      <div class="btn-row" style="margin-top:1rem">
-        <button class="btn-primary" onclick="goToWeekly()">阅读完整周报 →</button>
-        <button class="btn-secondary" onclick="closeModal()">稍后</button>
-      </div>
-    `, "wide");
+    const wid = item.weeklyReportId || "2026-W20";
+    openWeeklyDetail(wid);
+    apiPatch(`/inbox/${item.id}`, { read: true }).catch(() => {});
     return;
   }
 
@@ -2333,129 +2338,6 @@ async function saveRoleConfig(roleId) {
   await saveSettingsRole();
 }
 
-/* ── Weekly Report ── */
-function renderWeekly() {
-  const root = document.getElementById("weekly-root");
-  const wr = data.weeklyReport;
-  if (!root || !wr) return;
-  const author = getRole(wr.author);
-  const perf = data.rolePerformance || [];
-  const fs = wr.financeSnapshot;
-  const urgencyLabel = { today: "今日", this_week: "本周", later: "可缓" };
-
-  const pipelineRows = (wr.pipelineSnapshot || []).map((row) => {
-    const p = getProject(row.projectId);
-    return `
-      <div class="pipeline-row ${row.progress >= 100 ? "done" : ""}">
-        <div class="pipeline-name">${row.label || p?.clientName?.replace("（线索）", "")}</div>
-        <div class="pipeline-bar-wrap"><div class="pipeline-bar" style="width:${row.progress || 0}%"></div></div>
-        <div class="pipeline-meta">${row.progress || 0}% · ${row.stage}${row.note ? ` · ${row.note}` : ""}</div>
-      </div>`;
-  }).join("");
-
-  const decisions = (wr.pendingDecisions || []).map((d) => `
-    <button class="decision-chip glass" onclick="openWorkroom('${d.projectId}')">
-      <span class="dec-urgency u-${d.urgency}">${urgencyLabel[d.urgency] || d.urgency}</span>
-      <span>${d.title}</span>
-    </button>`).join("");
-
-  root.innerHTML = `
-    <div class="weekly-hero glass">
-      <div class="weekly-hero-left">
-        <img src="../../assets/avatars/ceo.png" alt="CEO" class="weekly-ceo-avatar"/>
-        <div>
-          <div class="sub">CEO 一页纸周报 · ${wr.week}</div>
-          <div class="weekly-period">${wr.period}</div>
-          <div class="weekly-status st-${wr.status}">${wr.status === "draft" ? "草稿待发送" : wr.status === "sent" ? "已发送" : wr.status}</div>
-        </div>
-      </div>
-      <div class="weekly-actions">
-        <button class="btn-secondary btn-sm" onclick="exportWeeklyMd()">导出 MD</button>
-        <button class="btn-secondary btn-sm" onclick="exportWeeklyPdf()">PDF</button>
-        <button class="btn-primary btn-sm" onclick="sendWeeklyMock()" ${wr.status === "sent" ? "disabled" : ""}>${wr.status === "draft" ? "发送给 Founder" : "已发送"}</button>
-      </div>
-    </div>
-
-    <div class="weekly-one-pager">
-      <div class="weekly-panel glass">
-        <h3>Pipeline 快照</h3>
-        <div class="pipeline-list">${pipelineRows}</div>
-      </div>
-      <div class="weekly-panel glass">
-        <h3>待你拍板</h3>
-        <div class="decision-list">${decisions || '<p class="empty-inline">暂无</p>'}</div>
-        ${fs ? `
-        <h3 style="margin-top:1rem">经营快照</h3>
-        <div class="finance-mini">
-          <div><span class="k">合同</span><span>${fmtMoney(fs.revenue)}</span></div>
-          <div><span class="k">已收</span><span>${fmtMoney(fs.received)}</span></div>
-          <div><span class="k">Token 成本</span><span>${fmtMoney(fs.cost)}</span></div>
-          <div><span class="k">毛利</span><span class="margin">${fmtMoney(fs.margin)} (${fs.marginPct}%)</span></div>
-        </div>` : ""}
-      </div>
-    </div>
-
-    <div class="weekly-summary glass"><strong>Executive Summary</strong><br>${wr.summary}</div>
-    ${wr.sections.map((sec) => `
-      <div class="weekly-section glass">
-        <h3>${sec.title}</h3>
-        <div class="md-content">${simpleMarkdown(sec.content)}</div>
-      </div>`).join("")}
-    <div class="cost-section">
-      <h3>五部门贡献（摘要，非五份长文）</h3>
-      <div class="role-perf-grid">
-        ${perf.map((p) => {
-          const r = getRole(p.roleId);
-          const hl = wr.roleHighlights?.find((h) => h.roleId === p.roleId);
-          return `
-          <div class="role-perf-card glass">
-            <img src="../../assets/avatars/${p.roleId}.png" alt=""/>
-            <div class="perf-info">
-              <div class="name">${r?.name}</div>
-              <div class="perf-stats">${p.tasksCompleted} 完成 · ${p.tasksRunning} 进行 · ${p.hoursActual}h</div>
-              ${hl ? `<div class="perf-hl">${hl.text}</div>` : ""}
-            </div>
-            <div class="perf-score">${p.outputScore}</div>
-          </div>`;
-        }).join("")}
-      </div>
-    </div>
-    <p class="hint">由 ${author?.name || "CEO"} 汇总 · ${new Date(wr.generatedAt).toLocaleString("zh-CN")} · 部门细节按需展开，不强制五份长周报</p>`;
-}
-
-async function exportWeeklyPdf() {
-  const wr = data.weeklyReport;
-  if (!wr) return;
-  const sectionsHtml = (wr.sections || [])
-    .map((s) => `<h2>${pdfEscapeHtml(s.title)}</h2>${simpleMarkdown(s.content || "")}`)
-    .join("");
-  const node = buildPdfExportNode({
-    title: `${BRAND_NAME} CEO 周报 ${wr.week}`,
-    subtitle: `${wr.period} · ${new Date(wr.generatedAt).toLocaleString("zh-CN")}`,
-    bodyHtml: `<p><strong>摘要</strong></p>${simpleMarkdown(wr.summary || "")}${sectionsHtml}`,
-  });
-  try {
-    await exportHtmlToPdf(node, `weekly_${wr.week}.pdf`);
-  } catch (e) {
-    alert(`PDF 导出失败：${e.message}`);
-  }
-}
-
-function exportWeeklyMd() {
-  const wr = data.weeklyReport;
-  if (!wr) return;
-  const md = `# ${BRAND_NAME} 周报 ${wr.week}\n\n${wr.period}\n\n## 摘要\n${wr.summary}\n\n${wr.sections.map((s) => `## ${s.title}\n${s.content}`).join("\n\n")}\n\n---\n生成：${wr.generatedAt}`;
-  downloadBlob(md, `weekly_${wr.week}.md`, "text/markdown;charset=utf-8");
-}
-
-async function sendWeeklyMock() {
-  if (data.weeklyReport.status === "sent") return;
-  await apiPost("/weekly/current/send", {});
-  await refreshDashboard();
-  renderAll();
-  openModal(`<h2 style="font-size:1rem;font-weight:700">周报已发送</h2><p style="font-size:0.82rem;color:var(--text2);margin-top:0.5rem">已通过飞书推送给 Founder</p><button class="btn-primary" style="width:100%;margin-top:1rem" onclick="closeModal()">好的</button>`);
-}
-
 window.selectSettingsRole = selectSettingsRole;
 window.onSettingsProviderChange = onSettingsProviderChange;
 window.saveSettingsRole = saveSettingsRole;
@@ -2494,9 +2376,6 @@ window.cancelArtifactEditor = cancelArtifactEditor;
 window.saveArtifactContent = saveArtifactContent;
 window.submitArtifactForReview = submitArtifactForReview;
 window.toggleArtifactDiff = toggleArtifactDiff;
-window.exportWeeklyMd = exportWeeklyMd;
-window.exportWeeklyPdf = exportWeeklyPdf;
-window.sendWeeklyMock = sendWeeklyMock;
 window.goToWeekly = goToWeekly;
 window.showRoleConfig = showRoleConfig;
 window.saveRoleConfig = saveRoleConfig;

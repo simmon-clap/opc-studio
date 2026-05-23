@@ -505,7 +505,7 @@
       "from": "ceo",
       "channel": "feishu",
       "title": "W20 周报草稿 · 请过目",
-      "preview": "Pipeline 5 项 · 2 个待决 · Acme HITL-3 今日需批",
+      "preview": "Acme 进入交付审批；Beta 评估 PoC；Pipeline +2 线索",
       "projectId": null,
       "weeklyReportId": "2026-W20",
       "at": "2026-05-21T14:00:00+08:00",
@@ -617,52 +617,203 @@
     { "id": "pay-2", "clientId": "client-acme", "projectId": "proj-acme", "amount": 24000, "label": "尾款 50%", "status": "pending", "at": null },
     { "id": "pay-3", "clientId": "client-gamma", "projectId": "proj-gamma-done", "amount": 28000, "label": "全款", "status": "received", "at": "2026-04-18" }
   ],
-  "weeklyReport": {
-    "week": "2026-W20",
-    "period": "2026-05-19 ~ 2026-05-25",
-    "status": "draft",
-    "generatedAt": "2026-05-21T14:00:00+08:00",
-    "author": "ceo",
-    "summary": "Acme 进入 HITL-3 交付审批；Beta 评估 PoC 路径；Pipeline +2 线索。",
-    "pipelineSnapshot": [
-      { "projectId": "proj-acme", "label": "Acme 审批流", "stage": "开发交付", "progress": 78, "note": "HITL-3 待批" },
-      { "projectId": "proj-beta", "label": "Beta 发票 OCR", "stage": "评估立项", "progress": 22, "note": "待 PoC 拍板" },
-      { "projectId": "proj-gamma-done", "label": "Gamma 合同审阅", "stage": "已交付", "progress": 100, "note": "续费跟进" },
-      { "projectId": "lead-catering", "label": "味链餐饮", "stage": "线索", "progress": 5, "note": "待 qualification" },
-      { "projectId": "lead-logistics", "label": "速达物流", "stage": "线索", "progress": 0, "note": "待 qualification" }
-    ],
-    "pendingDecisions": [
-      { "id": "dec-1", "title": "Acme HITL-3 交付物是否批准", "projectId": "proj-acme", "urgency": "today" },
-      { "id": "dec-2", "title": "Beta 是否先做 2 周 PoC 再报价", "projectId": "proj-beta", "urgency": "this_week" }
-    ],
-    "financeSnapshot": {
-      "revenue": 76000,
-      "received": 52000,
-      "cost": 2840,
-      "margin": 73160,
-      "marginPct": 96.3
+  "weeklyReports": [
+    {
+      "id": "2026-W20",
+      "week": "2026-W20",
+      "period": "2026-05-19 ~ 2026-05-25",
+      "status": "draft",
+      "generatedAt": "2026-05-21T14:00:00+08:00",
+      "snapshotAt": "2026-05-21T14:00:00+08:00",
+      "author": "ceo",
+      "summary": "Acme 交付审批临门一脚；Beta 走 PoC 路径；Pipeline 新增味链、速达两条线索，经营面平稳。",
+      "blocks": [
+        {
+          "kind": "projects",
+          "title": "项目进展",
+          "roleId": "ceo",
+          "items": [
+            {
+              "projectId": "proj-acme",
+              "roleId": "dev",
+              "label": "Acme 审批流",
+              "progress": 78,
+              "text": "staging 环境自测 4/5；交付包待 Founder 批"
+            },
+            { "projectId": "proj-beta", "roleId": "product", "label": "Beta 发票 OCR", "progress": 22, "text": "PRD 与 PoC 范围已对齐；待确认样本批次" },
+            { "projectId": "proj-gamma-done", "roleId": "ops", "label": "Gamma 合同审阅", "progress": 100, "text": "结项签字完成；续费方案起草中" },
+            { "projectId": "lead-catering", "roleId": "ops", "label": "味链餐饮", "progress": 8, "text": "线索 qualification；缺预算区间" },
+            { "projectId": "lead-logistics", "roleId": "ceo", "label": "速达物流", "progress": 3, "text": "NDA 意向确认；待安排首次访谈" }
+          ]
+        },
+        {
+          "kind": "risks",
+          "title": "风险与关注",
+          "roleId": "ceo",
+          "items": [
+            { "level": "medium", "text": "Beta ERP 私有部署 — API 文档不完整，PoC 周期可能 +3 天" },
+            { "level": "medium", "text": "Acme HITL-3 若本周未批 — 客户承诺交付日将吃紧" },
+            { "level": "low", "text": "味链 / 速达线索仍处早期，暂无合同风险" }
+          ]
+        },
+        {
+          "kind": "finance",
+          "title": "本周经营",
+          "roleId": "ops",
+          "text": "本周无新增收款；Token 与外包成本在预算内，毛利与 W19 基本持平",
+          "metrics": [
+            { "label": "毛利", "value": "96.3%" },
+            { "label": "本周成本", "value": "¥2.8k" }
+          ],
+          "costsLink": true
+        },
+        {
+          "kind": "outlook",
+          "title": "下周重点",
+          "roleId": "ceo",
+          "items": [
+            "Acme 结项与客户交付 ZIP（法务 + 运营联签）",
+            "Beta 2 周 PoC 启动 — 待 Founder 确认范围",
+            "味链 / 速达 qualification 问卷发出"
+          ]
+        },
+        {
+          "kind": "highlights",
+          "title": "部门一句",
+          "roleId": "ceo",
+          "collapsed": true,
+          "items": [
+            { "roleId": "ceo", "text": "完成 Beta 风险评估与 Acme 交付包编排" },
+            { "roleId": "product", "text": "Acme PRD v0.6 至 60%；Beta 用户故事梳理完成" },
+            { "roleId": "dev", "text": "Acme staging 联调；OCR 样本脚本就绪" },
+            { "roleId": "legal", "text": "Acme SOW 条款修订待命；速达 NDA 模板准备" },
+            { "roleId": "ops", "text": "Pipeline +2；Acme 客户通知邮件草稿" }
+          ]
+        }
+      ]
     },
-    "sections": [
-      { "title": "本周摘要", "content": "Acme 审批流 Agent staging 完成，等待 Founder 批交付物。Beta 发票 Agent 完成立项评估，建议 2 周 PoC。Gamma 进入续费沟通。" },
-      { "title": "项目进展", "content": "**Acme** 78% → HITL-3 待批\n**Beta** 22% → 待澄清预算与 ERP 样本\n**Gamma** 已交付，续费跟进中" },
-      { "title": "风险与决策", "content": "Beta ERP 私有部署风险中高；CEO 建议 PoC 后再报价 ¥8–12 万。" },
-      { "title": "下周计划", "content": "1. Acme 结项与客户交付\n2. Beta PoC 启动（待拍板）\n3. 味链/速达线索 qualification" }
-    ],
-    "roleHighlights": [
-      { "roleId": "ceo", "text": "完成 Beta 风险评估；打包 Acme HITL-3" },
-      { "roleId": "product", "text": "Acme PRD v0.6 完成 60%" },
-      { "roleId": "dev", "text": "Acme staging 自测 4/5" },
-      { "roleId": "ops", "text": "Pipeline +2；起草 Acme 客户邮件" },
-      { "roleId": "legal", "text": "待命 Acme SOW" }
-    ]
-  },
-  "rolePerformance": [
-    { "roleId": "ceo", "tasksCompleted": 4, "tasksRunning": 2, "hoursActual": 18.5, "hoursPlanned": 32, "outputScore": 92 },
-    { "roleId": "product", "tasksCompleted": 2, "tasksRunning": 1, "hoursActual": 14, "hoursPlanned": 28, "outputScore": 85 },
-    { "roleId": "legal", "tasksCompleted": 1, "tasksRunning": 0, "hoursActual": 6, "hoursPlanned": 16, "outputScore": 78 },
-    { "roleId": "dev", "tasksCompleted": 3, "tasksRunning": 1, "hoursActual": 22, "hoursPlanned": 36, "outputScore": 94 },
-    { "roleId": "ops", "tasksCompleted": 5, "tasksRunning": 2, "hoursActual": 16.5, "hoursPlanned": 24, "outputScore": 88 }
+    {
+      "id": "2026-W19",
+      "week": "2026-W19",
+      "period": "2026-05-12 ~ 2026-05-18",
+      "status": "sent",
+      "generatedAt": "2026-05-14T18:00:00+08:00",
+      "snapshotAt": "2026-05-14T18:00:00+08:00",
+      "author": "ceo",
+      "summary": "Gamma 结项收尾；Acme 开发交付启动；全 Portfolio 无新增高风险。",
+      "blocks": [
+        {
+          "kind": "projects",
+          "title": "项目进展",
+          "roleId": "ceo",
+          "items": [
+            { "projectId": "proj-gamma-done", "roleId": "ops", "label": "Gamma", "progress": 95, "text": "验收签字完成；尾款已收" },
+            { "projectId": "proj-acme", "roleId": "dev", "label": "Acme", "progress": 62, "text": "NDA 已定稿；开发分支已开" },
+            { "projectId": "proj-beta", "roleId": "product", "label": "Beta", "progress": 12, "text": "Brief intake 完成；待 ERP 样本" }
+          ]
+        },
+        {
+          "kind": "risks",
+          "title": "风险与关注",
+          "roleId": "ceo",
+          "items": [
+            { "level": "low", "text": "全 Portfolio 无新增高风险" }
+          ]
+        },
+        {
+          "kind": "finance",
+          "title": "本周经营",
+          "roleId": "ops",
+          "text": "Gamma 尾款 ¥28k 到账；Token 成本正常",
+          "metrics": [
+            { "label": "新增收款", "value": "¥28k" },
+            { "label": "毛利", "value": "95.8%" }
+          ],
+          "costsLink": true
+        },
+        {
+          "kind": "outlook",
+          "title": "下周重点",
+          "roleId": "ceo",
+          "items": [
+            "Acme staging 联调与 HITL-2 准备",
+            "Beta 线索深度 qualification",
+            "Pipeline 线索池整理"
+          ]
+        },
+        {
+          "kind": "highlights",
+          "title": "部门一句",
+          "roleId": "ceo",
+          "collapsed": true,
+          "items": [
+            { "roleId": "legal", "text": "Gamma 结项合同归档" },
+            { "roleId": "dev", "text": "Acme 基础脚手架合并 main" },
+            { "roleId": "ops", "text": "Gamma 尾款对账与客户满意度回访" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2026-W18",
+      "week": "2026-W18",
+      "period": "2026-05-05 ~ 2026-05-11",
+      "status": "sent",
+      "generatedAt": "2026-05-07T17:30:00+08:00",
+      "snapshotAt": "2026-05-07T17:30:00+08:00",
+      "author": "ceo",
+      "summary": "Gamma 进入验收阶段；Acme 法务 NDA 往返定稿；经营稳健。",
+      "blocks": [
+        {
+          "kind": "projects",
+          "title": "项目进展",
+          "roleId": "ceo",
+          "items": [
+            { "projectId": "proj-gamma-done", "roleId": "product", "label": "Gamma", "progress": 88, "text": "验收清单 9/10" },
+            { "projectId": "proj-acme", "roleId": "legal", "label": "Acme", "progress": 45, "text": "NDA 双向条款 CEO 修订中" }
+          ]
+        },
+        {
+          "kind": "risks",
+          "title": "风险与关注",
+          "roleId": "ceo",
+          "items": [
+            { "level": "low", "text": "无阻塞性风险" }
+          ]
+        },
+        {
+          "kind": "finance",
+          "title": "本周经营",
+          "roleId": "ops",
+          "text": "Acme 首款 ¥24k 已收；成本线平稳",
+          "metrics": [{ "label": "新增收款", "value": "¥24k" }],
+          "costsLink": true
+        },
+        {
+          "kind": "outlook",
+          "title": "下周重点",
+          "roleId": "ceo",
+          "items": [
+            "Gamma 验收签字",
+            "Acme 开发排期锁定"
+          ]
+        },
+        {
+          "kind": "highlights",
+          "title": "部门一句",
+          "roleId": "ceo",
+          "collapsed": true,
+          "items": [
+            { "roleId": "product", "text": "Gamma 验收清单收尾" },
+            { "roleId": "legal", "text": "Acme NDA 条款 CEO 修订" },
+            { "roleId": "ops", "text": "Acme 首款到账确认" }
+          ]
+        }
+      ]
+    }
   ],
+  "weeklyReport": null,
+  "rolePerformance": [],
   "ceoThread": [
     {
       "id": "thread-1",

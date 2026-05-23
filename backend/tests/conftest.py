@@ -53,6 +53,7 @@ GOLDEN_TOP_LEVEL_KEYS = {
     "closure",
     "payments",
     "weeklyReport",
+    "weeklyReports",
     "rolePerformance",
     "ceoThread",
     "costs",
