@@ -848,7 +848,22 @@
   ],
   "costs": {
     "period": "2026-05",
+    "periodType": "month",
     "currency": "CNY",
+    "maintainedBy": "ops",
+    "lastSyncedAt": "2026-05-21T14:00:00+08:00",
+    "statement": {
+      "revenue": 76000,
+      "costOfServices": 2840,
+      "grossProfit": 73160,
+      "grossMarginPct": 96.3,
+      "operatingExpenses": 300,
+      "operatingProfit": 72860,
+      "cashReceived": 52000,
+      "cashPending": 24000,
+      "taxAccrual": 0,
+      "taxRatePct": null
+    },
     "summary": {
       "totalCost": 2840,
       "totalTokens": 892000,
@@ -862,6 +877,11 @@
       "budgetAlert": false,
       "budgetAlertMessage": null
     },
+    "meta": {
+      "budgetAlertThresholdPct": 80,
+      "watchProjectCount": 1,
+      "lossProjectCount": 0
+    },
     "byRole": [
       { "roleId": "dev", "tokens": 412000, "cost": 1320, "runs": 86, "model": "claude-sonnet", "sharePct": 46.5 },
       { "roleId": "ceo", "tokens": 125000, "cost": 520, "runs": 48, "model": "gpt-4o", "sharePct": 18.3 },
@@ -872,35 +892,58 @@
     "byProject": [
       {
         "projectId": "proj-acme",
+        "clientId": "client-acme",
         "tokens": 520000,
         "cost": 1680,
         "sharePct": 59.2,
+        "costBreakdown": { "token": 1680, "external": 0, "tax": 0, "other": 0 },
+        "byRole": [
+          { "roleId": "dev", "tokens": 380000, "cost": 1200, "runs": 62, "sharePct": 71.4 },
+          { "roleId": "legal", "tokens": 90000, "cost": 280, "runs": 8, "sharePct": 16.7 },
+          { "roleId": "ceo", "tokens": 50000, "cost": 200, "runs": 12, "sharePct": 11.9 }
+        ],
         "revenue": 48000,
         "received": 24000,
         "pending": 24000,
         "margin": 46320,
         "marginPct": 96.5,
         "health": "healthy",
+        "advisory": "按合同口径盈利；建议跟进待收 ¥24,000",
+        "advisorySource": "rule",
         "note": "按合同口径盈利；已收款项覆盖 Token 成本约 14 倍"
       },
       {
         "projectId": "proj-gamma-done",
+        "clientId": "client-gamma",
         "tokens": 210000,
         "cost": 540,
         "sharePct": 19.0,
+        "costBreakdown": { "token": 540, "external": 0, "tax": 0, "other": 0 },
+        "byRole": [
+          { "roleId": "dev", "tokens": 120000, "cost": 320, "runs": 28, "sharePct": 59.3 },
+          { "roleId": "legal", "tokens": 90000, "cost": 220, "runs": 10, "sharePct": 40.7 }
+        ],
         "revenue": 28000,
         "received": 28000,
         "pending": 0,
         "margin": 27460,
         "marginPct": 98.1,
         "health": "strong",
+        "advisory": "已结项或全款到账，可作为同类项目定价基准。",
+        "advisorySource": "rule",
         "note": "已结项 · 全款到账 · 可作为定价基准"
       },
       {
         "projectId": "proj-beta",
+        "clientId": "client-beta",
         "tokens": 98000,
         "cost": 320,
         "sharePct": 11.3,
+        "costBreakdown": { "token": 320, "external": 0, "tax": 0, "other": 0 },
+        "byRole": [
+          { "roleId": "product", "tokens": 52000, "cost": 180, "runs": 18, "sharePct": 56.3 },
+          { "roleId": "dev", "tokens": 46000, "cost": 140, "runs": 12, "sharePct": 43.7 }
+        ],
         "revenue": 0,
         "received": 0,
         "pending": 0,
@@ -908,6 +951,8 @@
         "margin": -320,
         "marginPct": null,
         "health": "watch",
+        "advisory": "未签约已产生 Token 成本 ¥320，建议设 PoC 上限或暂停投入。",
+        "advisorySource": "rule",
         "note": "PoC 评估阶段未签约 · CEO 建议控制 PoC Token 上限 ¥800"
       },
       {
@@ -915,11 +960,17 @@
         "tokens": 12000,
         "cost": 45,
         "sharePct": 1.6,
+        "costBreakdown": { "token": 45, "external": 0, "tax": 0, "other": 0 },
+        "byRole": [
+          { "roleId": "ops", "tokens": 12000, "cost": 45, "runs": 6, "sharePct": 100 }
+        ],
         "revenue": 0,
         "received": 0,
         "margin": -45,
         "marginPct": null,
         "health": "pipeline",
+        "advisory": "线索阶段，建议控制登记成本，待 CEO 确认是否立项。",
+        "advisorySource": "rule",
         "note": "线索阶段 · 仅运营登记成本"
       },
       {
@@ -927,20 +978,26 @@
         "tokens": 8000,
         "cost": 30,
         "sharePct": 1.1,
+        "costBreakdown": { "token": 30, "external": 0, "tax": 0, "other": 0 },
+        "byRole": [
+          { "roleId": "ops", "tokens": 8000, "cost": 30, "runs": 4, "sharePct": 100 }
+        ],
         "revenue": 0,
         "received": 0,
         "margin": -30,
         "marginPct": null,
         "health": "pipeline",
+        "advisory": "线索阶段，建议控制登记成本，待 CEO 确认是否立项。",
+        "advisorySource": "rule",
         "note": "线索阶段 · 尚未投入开发"
       },
-      { "projectId": "_internal", "tokens": 64000, "cost": 300, "sharePct": 10.5, "label": "内部运营" }
+      { "projectId": "_internal", "tokens": 64000, "cost": 300, "sharePct": 10.5, "label": "内部运营", "costBreakdown": { "token": 300, "external": 0, "tax": 0, "other": 0 } }
     ],
     "weekly": [
-      { "week": "W17", "cost": 520 },
-      { "week": "W18", "cost": 680 },
-      { "week": "W19", "cost": 740 },
-      { "week": "W20", "cost": 900 }
+      { "week": "2026-W17", "cost": 520 },
+      { "week": "2026-W18", "cost": 680 },
+      { "week": "2026-W19", "cost": 740 },
+      { "week": "2026-W20", "cost": 900 }
     ]
   },
   "roleConfig": [

@@ -48,7 +48,6 @@ let settingsRoleId = "ceo";
 let runtimeSettings = null;
 let inboxFilter = "all";
 let inboxStatusFilter = "active";
-let pnlFilter = "all";
 let workroomProjectId = null;
 let workroomArtifactId = null;
 let openRoleId = null;
@@ -69,7 +68,6 @@ const COLLAB_COLORS = ["#0071e3", "#34c759", "#ff9500", "#af52de", "#ff3b30"];
 const CLIENT_STATUS = { active: "合作中", prospect: "洽谈", renewal: "续费", lead: "线索" };
 const CLOSURE_STATUS = { awaiting_hitl: "待 HITL", in_closure: "结项中", closed: "已结项" };
 const PNL_HEALTH = { healthy: "盈利", strong: "高毛利", watch: "需关注", pipeline: "线索", loss: "亏损" };
-const PNL_FILTER = { all: "全部", healthy: "盈利", watch: "需关注", pipeline: "线索" };
 
 function applyBrandMeta() {
   const company = data?.meta?.company || BRAND_NAME;
@@ -136,8 +134,9 @@ async function handlePulseStream(payload) {
   applyBrandMeta();
 
   const weeklyInteractive = typeof isWeeklyUiInteractive === "function" && isWeeklyUiInteractive();
+  const financeInteractive = typeof isFinanceUiInteractive === "function" && isFinanceUiInteractive();
   const view = getActiveViewId();
-  if (weeklyInteractive) {
+  if (weeklyInteractive || financeInteractive) {
     updateBadges();
   } else if (needPresentation && view === "overview") {
     renderOverview();
@@ -210,7 +209,8 @@ async function tickLiveSync() {
     lastSyncAt = Date.now();
     applyBrandMeta();
     const weeklyInteractive = typeof isWeeklyUiInteractive === "function" && isWeeklyUiInteractive();
-    if (weeklyInteractive) {
+    const financeInteractive = typeof isFinanceUiInteractive === "function" && isFinanceUiInteractive();
+    if (weeklyInteractive || financeInteractive) {
       updateBadges();
     } else {
       renderActiveView();
@@ -359,6 +359,7 @@ function closeModal() {
   document.body.style.overflow = document.getElementById("sheet-backdrop")?.hidden ? "" : "hidden";
   openRoleId = null;
   if (typeof weeklyDetailId !== "undefined") weeklyDetailId = null;
+  if (typeof financeDetailProjectId !== "undefined") financeDetailProjectId = null;
   const closeBtn = document.getElementById("modal-close");
   if (closeBtn) closeBtn.hidden = false;
 }
@@ -1765,168 +1766,6 @@ function renderProjectPnLBadge(pnl) {
   return `<span class="project-tag pnl-loss">亏损 ${fmtMoney(Math.abs(pnl.margin))}</span>`;
 }
 
-function renderProjectPnLCard(row) {
-  const p = getProject(row.projectId);
-  const label = p?.clientName?.replace("（线索）", "") || row.label || row.projectId;
-  const signed = row.revenue > 0;
-  return `
-    <button class="pnl-card glass pnl-${row.health}" onclick="showProjectPnL('${row.projectId}')">
-      <div class="pnl-card-top">
-        <div class="pnl-name">${label}</div>
-        <span class="pnl-health">${PNL_HEALTH[row.health] || row.health}</span>
-      </div>
-      <div class="pnl-metrics">
-        <div><span class="k">合同</span><span>${signed ? fmtMoney(row.revenue) : row.quoted ? `报价 ${fmtMoney(row.quoted)}` : "—"}</span></div>
-        <div><span class="k">已收</span><span>${fmtMoney(row.received || 0)}</span></div>
-        <div><span class="k">Token 成本</span><span>${fmtMoney(row.cost)}</span></div>
-        <div><span class="k">毛利</span><span class="${row.margin >= 0 ? "pos" : "neg"}">${signed || row.margin < 0 ? fmtMoney(row.margin) : "—"}${row.marginPct ? ` (${row.marginPct}%)` : ""}</span></div>
-      </div>
-      ${row.note ? `<div class="pnl-note">${row.note}</div>` : ""}
-    </button>`;
-}
-
-function setPnlFilter(id) {
-  pnlFilter = id;
-  renderCosts();
-}
-
-function showProjectPnL(projectId) {
-  const row = getProjectPnL(projectId);
-  const p = getProject(projectId);
-  if (!row || !p) return;
-  const signed = row.revenue > 0;
-  const recvCover = row.cost > 0 && row.received ? (row.received / row.cost).toFixed(1) : null;
-
-  openModal(`
-    <h2 style="font-size:1.05rem;font-weight:700">${p.clientName.replace("（线索）", "")} · 项目盈亏</h2>
-    <div class="modal-stat-row">
-      <div class="modal-stat"><div class="v">${signed ? fmtMoney(row.revenue) : "—"}</div><div class="l">合同</div></div>
-      <div class="modal-stat"><div class="v">${fmtMoney(row.received || 0)}</div><div class="l">已收</div></div>
-      <div class="modal-stat"><div class="v">${fmtMoney(row.cost)}</div><div class="l">Token 成本</div></div>
-      <div class="modal-stat"><div class="v" style="color:${row.margin >= 0 ? "var(--green)" : "var(--red)"}">${signed ? fmtMoney(row.margin) : fmtMoney(row.margin)}</div><div class="l">毛利</div></div>
-    </div>
-    <div class="config-grid" style="margin:0.75rem 0">
-      <div class="config-row"><span class="k">健康度</span><span class="pnl-health-tag pnl-${row.health}">${PNL_HEALTH[row.health]}</span></div>
-      ${row.quoted ? `<div class="config-row"><span class="k">报价区间</span><span>${fmtMoney(row.quoted)}</span></div>` : ""}
-      ${row.pending ? `<div class="config-row"><span class="k">待收</span><span>${fmtMoney(row.pending)}</span></div>` : ""}
-      ${recvCover ? `<div class="config-row"><span class="k">已收/成本</span><span>${recvCover}x 覆盖</span></div>` : ""}
-      <div class="config-row"><span class="k">Token</span><span>${((row.tokens || 0) / 1000).toFixed(0)}k · ${row.sharePct}% 占比</span></div>
-    </div>
-    ${row.note ? `<div class="focus-line">${row.note}</div>` : ""}
-    <div class="btn-row" style="margin-top:1rem">
-      <button class="btn-primary" onclick="closeModal();openWorkroom('${projectId}')">进入工作室</button>
-      ${signed ? `<button class="btn-secondary" onclick="closeModal();showClientDetail('${p.clientId}')">客户档案</button>` : ""}
-    </div>
-  `, "wide");
-}
-
-function renderProjectPnLSection() {
-  const rows = getProjectPnLRows().filter((r) => {
-    if (pnlFilter === "all") return true;
-    if (pnlFilter === "healthy") return r.health === "healthy" || r.health === "strong";
-    return r.health === pnlFilter;
-  });
-  const watchCount = getProjectPnLRows().filter((r) => r.health === "watch").length;
-
-  return `
-    ${watchCount ? `<div class="budget-alert glass pnl-watch-alert">${watchCount} 个项目需关注：未签约但已产生 Token 成本，建议设 PoC 上限或暂停投入</div>` : ""}
-    <div class="filter-row" style="margin-bottom:0.65rem">
-      ${Object.entries(PNL_FILTER).map(([id, label]) => `
-        <button class="filter-chip filter-chip-sm ${pnlFilter === id ? "active" : ""}" onclick="setPnlFilter('${id}')">${label}</button>
-      `).join("")}
-    </div>
-    <div class="pnl-grid">${rows.map(renderProjectPnLCard).join("") || '<p class="empty-inline">暂无</p>'}</div>`;
-}
-
-function renderCosts() {
-  const c = data.costs;
-  if (!c) return;
-  const s = c.summary;
-  const budgetPct = Math.round((s.totalCost / s.monthlyBudget) * 100);
-  const maxWeek = Math.max(...c.weekly.map((w) => w.cost));
-  const marginColor = (s.marginPct || 0) >= 80 ? "var(--green)" : "var(--orange)";
-
-  document.getElementById("costs-root").innerHTML = `
-    ${s.budgetAlert ? `<div class="budget-alert glass">${s.budgetAlertMessage || "Token 预算告警"}</div>` : ""}
-    <div class="finance-grid">
-      <div class="finance-card glass">
-        <div class="sub">本月收入（合同）</div>
-        <div class="big">${fmtMoney(s.revenue)}</div>
-        <div class="sub">已收 ${fmtMoney(s.received)} · 待收 ${fmtMoney(s.pending)}</div>
-      </div>
-      <div class="finance-card glass">
-        <div class="sub">Token 成本</div>
-        <div class="big">${fmtMoney(s.totalCost)}</div>
-        <div class="sub">${(s.totalTokens / 1000).toFixed(0)}k tokens</div>
-      </div>
-      <div class="finance-card glass highlight">
-        <div class="sub">毛利</div>
-        <div class="big" style="color:${marginColor}">${fmtMoney(s.margin)}</div>
-        <div class="sub">毛利率 ${s.marginPct}%</div>
-      </div>
-    </div>
-    <div class="cost-hero glass">
-      <div>
-        <div class="sub">${c.period} · Token 预算</div>
-        <div class="big">${fmtMoney(s.totalCost)}</div>
-        <div class="sub">预算 ${fmtMoney(s.monthlyBudget)} · 剩余 ${fmtMoney(s.budgetRemaining)}</div>
-      </div>
-      <div class="budget-ring">
-        ${progressRing(budgetPct, 72, 4)}
-        <span>${budgetPct}%</span>
-      </div>
-    </div>
-    <div class="cost-section">
-      <h3>按角色</h3>
-      <div class="role-cost-list">
-        ${c.byRole.map((row) => {
-          const r = getRole(row.roleId);
-          const cfg = data.roleConfig?.find((x) => x.roleId === row.roleId);
-          return `
-          <button class="role-cost-row glass" onclick="showRoleConfig('${row.roleId}')">
-            <img src="../../assets/avatars/${row.roleId}.png" alt=""/>
-            <div class="info">
-              <div class="name">${r?.name} · ${ROLE_SHORT[row.roleId]}</div>
-              <div class="bar-wrap"><div class="bar" style="width:${row.sharePct}%"></div></div>
-            </div>
-            <div class="amt">
-              <div class="c">¥${row.cost}</div>
-              <div class="t">${(row.tokens / 1000).toFixed(0)}k · ${cfg?.model || row.model}</div>
-            </div>
-          </button>`;
-        }).join("")}
-      </div>
-    </div>
-    <div class="cost-section">
-      <h3>项目盈亏 · 确保每个项目赚钱</h3>
-      ${renderProjectPnLSection()}
-    </div>
-    <div class="cost-section">
-      <h3>Token 成本分布</h3>
-      <div class="proj-cost-grid">
-        ${c.byProject.filter((r) => r.projectId !== "_internal").map((row) => {
-          const p = getProject(row.projectId);
-          const label = p?.clientName?.replace("（线索）", "") || row.label || row.projectId;
-          return `<button class="proj-cost-chip glass" onclick="showProjectPnL('${row.projectId}')"><div class="v">${fmtMoney(row.cost)}</div><div class="l">${label}<br>${row.sharePct}%</div></button>`;
-        }).join("")}
-        ${(() => {
-          const internal = c.byProject.find((r) => r.projectId === "_internal");
-          return internal ? `<div class="proj-cost-chip glass"><div class="v">${fmtMoney(internal.cost)}</div><div class="l">${internal.label}<br>${internal.sharePct}%</div></div>` : "";
-        })()}
-      </div>
-    </div>
-    <div class="cost-section">
-      <h3>近四周</h3>
-      <div class="week-bars glass" style="padding:1rem;border-radius:14px">
-        ${c.weekly.map((w) => `
-          <div class="week-bar">
-            <div class="bar" style="height:${Math.max(12, (w.cost / maxWeek) * 64)}px"></div>
-            <span class="lbl">${w.week}</span>
-          </div>`).join("")}
-      </div>
-    </div>`;
-}
-
 const API_PROVIDER_PRESETS = {
   OpenRouter: "https://openrouter.ai/api/v1",
   OpenAI: "https://api.openai.com/v1",
@@ -2348,8 +2187,6 @@ window.showRoleModalStacked = showRoleModalStacked;
 window.showRoleModal = showRoleModal;
 window.showStatsModal = showStatsModal;
 window.showClientDetail = showClientDetail;
-window.showProjectPnL = showProjectPnL;
-window.setPnlFilter = setPnlFilter;
 window.openWorkroom = openWorkroom;
 window.selectArtifact = selectArtifact;
 window.setInboxFilter = setInboxFilter;
