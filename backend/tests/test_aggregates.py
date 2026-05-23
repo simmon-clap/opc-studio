@@ -48,7 +48,7 @@ def test_role_live_state_from_tasks():
         },
     }
     recompute_all(dashboard)
-    product = dashboard["roles"][0]
+    product = next(r for r in dashboard["roles"] if r["id"] == "product")
     assert product["workStatus"] == "working"
     assert product["runningCount"] == 1
     assert product["pendingCount"] == 1
@@ -109,7 +109,7 @@ def test_legal_extras_and_focus_from_live_tasks():
         },
     }
     recompute_all(dashboard)
-    legal = dashboard["roles"][0]
+    legal = next(r for r in dashboard["roles"] if r["id"] == "legal")
     assert "刚完成" in legal["focus"]
     assert "华为" in legal["focus"]
     assert legal["extras"]["quotesPending"] == 1

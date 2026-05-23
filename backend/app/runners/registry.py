@@ -11,7 +11,9 @@ from app.deliverables.templates import build_generation_prompt, get_template
 from app.deliverables.validator import validate_content
 from app.runners.base import RunContext, RunResult
 from app.runners.prompts import system_prompt
+from app.runners.agent_loop import run_agent_loop, tool_calls_to_json
 from app.runners.stub import RUNNERS as STUB_RUNNERS
+from app.tools.registry import bootstrap_tools, resolve_allowed_tools
 from app.services.llm_client import LlmError, chat_completion, estimate_cost_cny
 from app.services.role_config_service import RoleRuntimeConfig, get_role_runtime_config
 
@@ -69,10 +71,52 @@ async def run_role(
         {"role": "user", "content": prompt},
     ]
 
+    bootstrap_tools()
+    task_kind = (
+        ctx.task.get("taskKind")
+        or ctx.task.get("deliverableKind")
+        or f"{role_id}.general"
+    )
+    from app.presentation.skills import route_skill
+
+    skill = route_skill(
+        ctx.dashboard,
+        role_id=role_id,
+        task_kind=task_kind,
+        skill_id=ctx.task.get("skillId"),
+        skill_chain_id=ctx.task.get("skillChainId"),
+    )
+    skill_tools = list(skill.get("tools") or []) if skill else None
+    if skill:
+        ctx.task.setdefault("skillId", skill["id"])
+
+    allowed_tools = resolve_allowed_tools(ctx.dashboard, role_id, skill_tools=skill_tools)
+    tool_calls_json: list[dict] = []
+
     try:
-        resp = await chat_completion(
-            config, messages, max_tokens=max_tokens, temperature=temperature
-        )
+        if allowed_tools and not ctx.task.get("disableTools"):
+            loop = await run_agent_loop(
+                config,
+                messages,
+                dashboard=ctx.dashboard,
+                role_id=role_id,
+                project_id=ctx.project_id,
+                task=ctx.task,
+                session=session,
+            )
+            content = (loop.content or "").strip()
+            tool_calls_json = tool_calls_to_json(loop.tool_calls)
+            resp_tokens_in = loop.input_tokens
+            resp_tokens_out = loop.output_tokens
+            resp_model = loop.model
+        else:
+            resp = await chat_completion(
+                config, messages, max_tokens=max_tokens, temperature=temperature
+            )
+            content = (resp.content or "").strip()
+            resp_tokens_in = resp.input_tokens
+            resp_tokens_out = resp.output_tokens
+            resp_model = resp.model
     except LlmError as exc:
         tpl = get_template(spec.template_id)
         content = tpl.skeleton
@@ -100,7 +144,6 @@ async def run_role(
             cost_cny=0,
         )
 
-    content = (resp.content or "").strip()
     if not content:
         stub = STUB_RUNNERS.get(role_id)
         if stub:
@@ -129,11 +172,14 @@ async def run_role(
         progress_note=(
             f"{config.name} 完成 · {spec.title} · 质量 {quality['score']}/100"
             + (f" · {quality['pendingFields']} 处待填" if quality["pendingFields"] else "")
+            + (f" · {len(tool_calls_json)} 次工具调用" if tool_calls_json else "")
         ),
-        tokens_in=resp.input_tokens,
-        tokens_out=resp.output_tokens,
-        model=resp.model,
-        cost_cny=estimate_cost_cny(resp.input_tokens, resp.output_tokens),
+        tokens_in=resp_tokens_in,
+        tokens_out=resp_tokens_out,
+        model=resp_model,
+        cost_cny=estimate_cost_cny(resp_tokens_in, resp_tokens_out),
+        tool_calls=tool_calls_json,
+        skill_id=ctx.task.get("skillId"),
     )
 
 

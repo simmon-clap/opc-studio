@@ -9,8 +9,9 @@ from sqlmodel import Session
 from app.api.deps import fail, ok, run_mutation
 from app.db import get_session
 from app.services import orchestrator_hooks
-from app.services.dashboard_store import get_dashboard
+from app.services.dashboard_store import get_dashboard, mutate
 from app.services.state_machines import patch_inbox, resolve_inbox
+from app.presentation.skills import activate_skill, import_skill
 
 router = APIRouter(tags=["inbox"])
 
@@ -82,3 +83,36 @@ async def resolve_inbox_item(
 
     await orchestrator_hooks.on_inbox_resolved(inbox_id, body.action)
     return ok(item)
+
+
+@router.post("/inbox/{inbox_id}/skill-install")
+def approve_skill_install(inbox_id: str, session: Session = Depends(get_session)):
+    """采纳 skill_proposal → import + activate."""
+    skill_id: str | None = None
+    with mutate(session) as dashboard:
+        item = next((i for i in dashboard.get("inbox", []) if i.get("id") == inbox_id), None)
+        if item is None:
+            raise fail("INBOX_NOT_FOUND", "收件项不存在", status=404)
+        if item.get("category") != "skill_proposal":
+            raise fail("INVALID_CATEGORY", "非 Skill 安装提案", status=400)
+        proposed = item.get("proposedSkill") or {}
+        markdown = proposed.get("rawMarkdown") or proposed.get("markdown") or ""
+        if not markdown.strip():
+            raise fail("MISSING_SKILL_DOC", "提案缺少 SKILL 文档", status=400)
+        try:
+            skill = import_skill(dashboard, markdown)
+            activate_skill(dashboard, skill["id"])
+            skill_id = skill["id"]
+        except ValueError as exc:
+            if str(exc) == "SKILL_EXISTS":
+                existing_id = proposed.get("id")
+                if existing_id:
+                    activate_skill(dashboard, existing_id)
+                    skill_id = existing_id
+                else:
+                    raise fail("SKILL_EXISTS", "Skill 已存在", status=409) from exc
+            else:
+                raise fail("IMPORT_FAILED", str(exc), status=400) from exc
+        item["status"] = "resolved"
+        item["resolvedAction"] = "approve_install"
+    return ok({"inboxId": inbox_id, "skillId": skill_id})

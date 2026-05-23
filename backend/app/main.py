@@ -27,6 +27,12 @@ from app.api import (
     projects,
     roles,
     runtime,
+    settings,
+    skills,
+    skill_chains,
+    mcp,
+    tools,
+    agent_runs,
     weekly,
 )
 from app.config import APP_VERSION, PROJECT_ROOT
@@ -41,6 +47,9 @@ from app.services.inbox_dedup import dedupe_active_inbox
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    from app.tools.registry import bootstrap_tools
+
+    bootstrap_tools()
     with session_scope() as session:
         seed_if_needed(session)
         tick_reconcile(session)
@@ -89,6 +98,12 @@ for module in (
     weekly,
     finance,
     roles,
+    settings,
+    skills,
+    skill_chains,
+    mcp,
+    tools,
+    agent_runs,
     deliberation,
     orchestration,
     pulse,

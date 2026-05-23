@@ -37,6 +37,8 @@ class RunResult:
         tokens_out: int = 0,
         model: str = "stub",
         cost_cny: float = 0.0,
+        tool_calls: list[dict] | None = None,
+        skill_id: str | None = None,
     ):
         self.artifact_id = artifact_id
         self.artifact_content = artifact_content
@@ -58,6 +60,8 @@ class RunResult:
         self.tokens_out = tokens_out
         self.model = model
         self.cost_cny = cost_cny
+        self.tool_calls = tool_calls or []
+        self.skill_id = skill_id
 
 
 class RoleRunner(ABC):

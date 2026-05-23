@@ -18,7 +18,10 @@ from app.services.role_config_service import get_role_runtime_config
 
 logger = logging.getLogger(__name__)
 
-VALID_ROLES = frozenset({"ceo", "product", "legal", "dev", "ops"})
+from app.presentation.roles_registry import DEFAULT_REGISTRY_ENTRIES, dispatchable_role_ids
+
+# Fallback when dashboard unavailable (tests / from_dict)
+_LEGACY_VALID = frozenset(r["id"] for r in DEFAULT_REGISTRY_ENTRIES)
 
 
 def _transitions():
@@ -46,7 +49,8 @@ class DispatchPlan:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "DispatchPlan":
+    def from_dict(cls, data: dict[str, Any], allowed: frozenset[str] | None = None) -> "DispatchPlan":
+        valid = allowed or _LEGACY_VALID
         directives = [
             RoleDirective(
                 role_id=item["role_id"],
@@ -54,7 +58,7 @@ class DispatchPlan:
                 kind=item.get("kind", item["role_id"]),
             )
             for item in data.get("directives", [])
-            if item.get("role_id") in VALID_ROLES
+            if item.get("role_id") in valid and item.get("role_id") != "ceo"
         ]
         return cls(
             should_dispatch=bool(data.get("should_dispatch")),
@@ -85,7 +89,8 @@ def _parse_plan_json(raw: str) -> dict[str, Any] | None:
             return None
 
 
-def _normalize_plan(data: dict[str, Any]) -> DispatchPlan:
+def _normalize_plan(data: dict[str, Any], dashboard: dict[str, Any] | None = None) -> DispatchPlan:
+    allowed = dispatchable_role_ids(dashboard) if dashboard else _LEGACY_VALID
     mode = (data.get("mode") or "none").lower()
     if mode not in {"none", "directives", "kickoff", "deliberation"}:
         mode = "none"
@@ -96,7 +101,7 @@ def _normalize_plan(data: dict[str, Any]) -> DispatchPlan:
         if not isinstance(item, dict):
             continue
         role_id = (item.get("role") or item.get("role_id") or "").lower()
-        if role_id not in VALID_ROLES or role_id == "ceo":
+        if role_id not in allowed or role_id == "ceo":
             continue
         title = (item.get("title") or "").strip()
         if not title:
@@ -149,6 +154,7 @@ async def plan_dispatch(
         )
 
     meta_hint = dashboard.get("meta", {}).get("_ceoDispatchHint")
+    allowed = dispatchable_role_ids(dashboard)
     if meta_hint:
         directives = [
             RoleDirective(
@@ -157,7 +163,7 @@ async def plan_dispatch(
                 kind=item.get("kind", item["role_id"]),
             )
             for item in meta_hint
-            if item.get("role_id") in VALID_ROLES
+            if item.get("role_id") in allowed
         ]
         if directives:
             return DispatchPlan(
@@ -179,7 +185,7 @@ async def plan_dispatch(
     roles_desc = "\n".join(
         f"- {r.get('id')}: {r.get('name')} — {r.get('charter', '')}"
         for r in dashboard.get("roles", [])
-        if r.get("id") in VALID_ROLES
+        if r.get("id") in allowed
     )
 
     prompt = (
@@ -223,7 +229,7 @@ async def plan_dispatch(
         if data is None:
             logger.warning("CEO dispatch plan JSON parse failed: %s", resp.content[:200])
             return _plan_from_rules(text)
-        plan = _normalize_plan(data)
+        plan = _normalize_plan(data, dashboard)
         if plan.should_dispatch and plan.mode == "none" and plan.directives:
             plan.mode = "directives"
         return plan

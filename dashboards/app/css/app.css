@@ -1986,3 +1986,87 @@ mark.art-pending, .art-pending {
 .cost-section details summary h3 { display: inline; margin: 0; }
 .cost-section details[open] summary h3 { margin-bottom: 0; }
 
+/* ── Settings v2 · stg-* ── */
+.stg-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  flex-wrap: wrap; margin-bottom: 0.85rem; padding: 0.45rem 0.65rem; border-radius: 14px;
+}
+.stg-toolbar-chips { display: flex; gap: 0.4rem; }
+.stg-chip {
+  font-size: 0.68rem; padding: 0.2rem 0.55rem; border-radius: 999px;
+  background: rgba(0,0,0,0.05); color: var(--text3);
+}
+.stg-body { display: grid; gap: 0.85rem; }
+.stg-section { padding: 1rem 1.1rem; border-radius: var(--radius); }
+.stg-section-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.stg-section-head h3 { font-size: 0.95rem; font-weight: 700; }
+.stg-hint { font-size: 0.72rem; color: var(--text3); margin-top: 0.15rem; }
+.stg-section-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+.stg-orchestration-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.stg-check { font-size: 0.78rem; display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+.stg-details summary { font-size: 0.78rem; color: var(--text2); cursor: pointer; margin-bottom: 0.5rem; }
+.stg-placeholder { opacity: 0.92; }
+.stg-empty-hint { font-size: 0.75rem; color: var(--text3); }
+.stg-roles-layout {
+  display: grid; grid-template-columns: 240px 1fr; gap: 0.85rem; min-height: 420px;
+}
+@media (max-width: 860px) { .stg-roles-layout { grid-template-columns: 1fr; } }
+.stg-roles-sidebar { padding: 0.85rem; border-radius: var(--radius); }
+.stg-roles-sidebar-head {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;
+}
+.stg-sidebar-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); }
+.stg-role-list { display: grid; gap: 0.4rem; max-height: min(70vh, 520px); overflow-y: auto; }
+.stg-role-pill {
+  display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.55rem 0.65rem;
+  border-radius: 12px; border: 1px solid transparent; background: rgba(255,255,255,0.35);
+  cursor: pointer; text-align: left; font-family: inherit; color: inherit;
+}
+.stg-role-pill.active { border-color: var(--accent); background: rgba(99,102,241,0.08); }
+.stg-role-pill img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.stg-role-pill-text { flex: 1; min-width: 0; }
+.stg-role-pill-text .name { display: block; font-size: 0.8rem; font-weight: 600; }
+.stg-role-pill-text .meta { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: 0.15rem; }
+.stg-cap-tag { font-size: 0.58rem; padding: 0.1rem 0.35rem; border-radius: 999px; background: rgba(0,0,0,0.06); color: var(--text3); }
+.stg-role-detail { padding: 1rem 1.1rem; border-radius: var(--radius); }
+.stg-detail-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.stg-detail-head img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
+.stg-detail-section { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.stg-detail-section:last-of-type { border-bottom: none; }
+.stg-detail-label {
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text3); margin-bottom: 0.55rem;
+}
+.stg-identity-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.65rem; margin-bottom: 0.65rem;
+}
+.stg-identity-grid .stg-full { grid-column: 1 / -1; }
+.stg-inline-actions { display: flex; gap: 0.45rem; margin-top: 0.45rem; }
+.stg-model-slot {
+  padding: 0.65rem 0.75rem; border-radius: 12px; background: rgba(0,0,0,0.03); margin-bottom: 0.5rem;
+}
+.stg-model-slot.disabled { opacity: 0.55; pointer-events: none; }
+.stg-model-slot-head { display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; margin-bottom: 0.45rem; }
+.stg-lock-hint { font-size: 0.62rem; color: var(--text3); font-weight: 400; }
+.stg-model-slot-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+.stg-empty { padding: 2rem; text-align: center; color: var(--text3); font-size: 0.82rem; }
+.stg-modal {
+  position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.35); padding: 1rem;
+}
+.stg-modal-panel { width: min(440px, 100%); padding: 1.1rem; border-radius: var(--radius); max-height: 90vh; overflow-y: auto; }
+.stg-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; }
+.stg-skill-list { display: grid; gap: 0.4rem; }
+.stg-skill-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  padding: 0.55rem 0.65rem; border-radius: 10px; background: rgba(0,0,0,0.03);
+}
+.stg-skill-name { font-size: 0.8rem; font-weight: 600; display: block; }
+.stg-skill-meta { font-size: 0.65rem; color: var(--text3); }
+

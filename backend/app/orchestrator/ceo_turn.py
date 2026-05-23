@@ -32,7 +32,7 @@ from app.services.role_config_service import get_role_runtime_config
 
 logger = logging.getLogger(__name__)
 
-VALID_ROLES = frozenset({"ceo", "product", "legal", "dev", "ops"})
+from app.presentation.roles_registry import dispatchable_role_ids
 
 
 @dataclass
@@ -65,7 +65,10 @@ def _parse_turn_json(raw: str) -> dict[str, Any] | None:
             return None
 
 
-def _plan_from_turn_data(data: dict[str, Any]) -> DispatchPlan:
+def _plan_from_turn_data(data: dict[str, Any], dashboard: dict[str, Any] | None = None) -> DispatchPlan:
+    from app.presentation.roles_registry import dispatchable_role_ids
+
+    allowed = dispatchable_role_ids(dashboard) if dashboard else frozenset()
     dispatch = data.get("dispatch") or {}
     should = bool(dispatch.get("shouldDispatch") or dispatch.get("should_dispatch"))
     mode = dispatch.get("mode") or ("directives" if should else "none")
@@ -75,7 +78,7 @@ def _plan_from_turn_data(data: dict[str, Any]) -> DispatchPlan:
         if not isinstance(item, dict):
             continue
         role_id = (item.get("role") or item.get("role_id") or "").lower()
-        if role_id not in VALID_ROLES or role_id == "ceo":
+        if role_id not in allowed or role_id == "ceo":
             continue
         kind = (item.get("kind") or role_id).strip()
         if kind in seen:
@@ -168,10 +171,11 @@ async def _llm_turn(
     attachment_context: str,
     ops_ctx: str,
 ) -> CeoTurnResult:
+    allowed = dispatchable_role_ids(dashboard)
     roles_desc = "\n".join(
         f"- {r.get('id')}: {r.get('name')}"
         for r in dashboard.get("roles", [])
-        if r.get("id") in VALID_ROLES
+        if r.get("id") in allowed
     )
     prompt = (
         f"关联项目：{project_id} · {project.get('clientName', '')}\n"
@@ -205,7 +209,7 @@ async def _llm_turn(
 
     reply = (data.get("reply") or "").strip() or "收到。"
     resolved_project = data.get("projectId") or project_id
-    plan = _plan_from_turn_data(data)
+    plan = _plan_from_turn_data(data, dashboard)
     if not plan.should_dispatch:
         plan = await _merge_rule_plan(session, dashboard, text, resolved_project, plan)
 

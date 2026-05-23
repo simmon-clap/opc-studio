@@ -24,3 +24,5 @@ class AgentRun(SQLModel, table=True):
         default_factory=lambda: datetime.now(timezone.utc),
     )
     finished_at: Optional[datetime] = None
+    skill_id: Optional[str] = None
+    tool_calls_json: Optional[str] = None

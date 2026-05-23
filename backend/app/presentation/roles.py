@@ -1,36 +1,57 @@
-"""Canonical role registry — extend here when adding agents."""
+"""Canonical role registry — extend via roleRegistry API."""
 
 from __future__ import annotations
 
 from typing import Any
 
-DEFAULT_ROLES: tuple[dict[str, Any], ...] = (
-    {"id": "ceo", "short": "CEO", "overview": {"x": 50, "y": 22}},
-    {"id": "product", "short": "产品", "overview": {"x": 18, "y": 42}},
-    {"id": "legal", "short": "法务", "overview": {"x": 82, "y": 42}},
-    {"id": "dev", "short": "开发", "overview": {"x": 28, "y": 78}},
-    {"id": "ops", "short": "运营", "overview": {"x": 72, "y": 78}},
+from app.presentation.roles_registry import (
+    DEFAULT_REGISTRY_ENTRIES,
+    sync_role_registry,
 )
 
-VALID_ROLE_IDS = frozenset(r["id"] for r in DEFAULT_ROLES)
+# Back-compat aliases
+DEFAULT_ROLES: tuple[dict[str, Any], ...] = tuple(
+    {
+        "id": e["id"],
+        "short": e.get("shortLabel", e["id"]),
+        "overview": dict(e.get("overview", {})),
+    }
+    for e in DEFAULT_REGISTRY_ENTRIES
+)
 
-FALLBACK_LABELS = {r["id"]: r["short"] for r in DEFAULT_ROLES}
+FALLBACK_LABELS = {e["id"]: e.get("shortLabel", e["id"]) for e in DEFAULT_REGISTRY_ENTRIES}
+
+
+def valid_role_ids(dashboard: dict[str, Any]) -> frozenset[str]:
+    from app.presentation.roles_registry import valid_role_ids as _valid
+
+    return _valid(dashboard)
+
+
+# Legacy name
+VALID_ROLE_IDS = frozenset(r["id"] for r in DEFAULT_ROLES)
 
 
 def role_registry(dashboard: dict[str, Any]) -> list[dict[str, Any]]:
-    """Merge dashboard roles with layout hints for UI."""
-    by_id = {r["id"]: r for r in dashboard.get("roles", []) if r.get("id")}
+    """Merge registry with live roles for UI."""
+    sync_role_registry(dashboard)
+    live_by_id = {r["id"]: r for r in dashboard.get("roles", []) if r.get("id")}
     out: list[dict[str, Any]] = []
-    for base in DEFAULT_ROLES:
-        rid = base["id"]
-        live = by_id.get(rid, {})
+    for entry in dashboard.get("roleRegistry", {}).get("roles", []):
+        rid = entry.get("id")
+        if not rid or entry.get("status") == "disabled":
+            continue
+        live = live_by_id.get(rid, {})
+        short = entry.get("shortLabel") or FALLBACK_LABELS.get(rid, rid)
         out.append(
             {
                 "id": rid,
-                "name": live.get("name") or FALLBACK_LABELS.get(rid, rid),
-                "short": base["short"],
+                "name": live.get("name") or short,
+                "short": short,
                 "workStatus": live.get("workStatus", "idle"),
-                "overview": dict(base["overview"]),
+                "overview": dict(entry.get("overview") or {"x": 50, "y": 50}),
+                "capabilities": list(entry.get("capabilities") or ["text"]),
+                "dispatchable": entry.get("dispatchable", True),
             }
         )
     return out
@@ -38,4 +59,10 @@ def role_registry(dashboard: dict[str, Any]) -> list[dict[str, Any]]:
 
 def role_label(dashboard: dict[str, Any], role_id: str) -> str:
     role = next((r for r in dashboard.get("roles", []) if r.get("id") == role_id), {})
-    return role.get("name") or FALLBACK_LABELS.get(role_id, role_id)
+    if role.get("name"):
+        return role["name"]
+    entry = next(
+        (r for r in dashboard.get("roleRegistry", {}).get("roles", []) if r.get("id") == role_id),
+        {},
+    )
+    return entry.get("shortLabel") or FALLBACK_LABELS.get(role_id, role_id)

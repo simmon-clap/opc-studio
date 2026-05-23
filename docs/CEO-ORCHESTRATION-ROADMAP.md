@@ -446,6 +446,28 @@ Founder 说：{text}
 
 ---
 
+### Phase 6：设置平台 & Skill Hub（执行面）
+
+**目标：** 设置页 IA（系统 / 角色）；`roleRegistry` 动态扩展（**设置页手动新增 role，不预置 brand mock**）；Skill Hub + Tool Registry + MCP + 多 Model；CEO 驱动 Skill 安装（Founder 发 SKILL → CEO 提案 → Ops 采纳）。
+
+| 文档 | 内容 |
+|------|------|
+| [SETTINGS-PLATFORM-ROADMAP.md](./SETTINGS-PLATFORM-ROADMAP.md) | Epic 1–5 总路线 |
+| [SETTINGS-V2.md](./SETTINGS-V2.md) | 设置 UI / 数据 / API |
+| [SKILL-HUB.md](./SKILL-HUB.md) | Skill / Tool / MCP / Router / 链 |
+
+| Epic | 交付 |
+|------|------|
+| 1 | `settings.js`；系统/角色 segment；`POST /roles/registry` |
+| 2 | Tool Registry + Runner enforce |
+| 3 | Skill Hub + import + inbox `skill_proposal` |
+| 4 | MCP Bridge + image/video slot |
+| 5 | Skill 链（v1 单 skill，架构预留） |
+
+**版本建议：** v0.9.x 起按 Epic 发布
+
+---
+
 ## 5. 模块与文件映射（规划期）
 
 ```

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.presentation.settings import sync_settings
+from app.presentation.mcp import sync_mcp_connections
+from app.presentation.skills import sync_skill_catalog
 from app.services.dispatch_feed import bootstrap_dispatch_feed
 from app.presentation.finance import sync_finance
 from app.presentation.weekly import sync_weekly_reports
@@ -20,6 +23,9 @@ def normalize_dashboard_domains(dashboard: dict[str, Any]) -> None:
     meta.setdefault("lastWorkflowRun", None)
     meta.setdefault("orchestrationActive", False)
     bootstrap_dispatch_feed(dashboard)
+    sync_settings(dashboard)
+    sync_skill_catalog(dashboard)
+    sync_mcp_connections(dashboard)
     sync_finance(dashboard)
     sync_weekly_reports(dashboard)
 

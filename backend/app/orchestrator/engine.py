@@ -614,10 +614,14 @@ class Orchestrator:
         project_id: str | None,
         task_id: str | None,
         result,
-    ) -> None:
+    ) -> str:
+        import json
+
+        run_id = f"run-{uuid4().hex[:10]}"
+        tool_calls = getattr(result, "tool_calls", None) or []
         session.add(
             AgentRun(
-                id=f"run-{uuid4().hex[:10]}",
+                id=run_id,
                 task_id=task_id,
                 role_id=role_id,
                 project_id=project_id,
@@ -626,6 +630,8 @@ class Orchestrator:
                 input_tokens=result.tokens_in,
                 output_tokens=result.tokens_out,
                 cost_cny=float(result.cost_cny or 0),
+                skill_id=getattr(result, "skill_id", None),
+                tool_calls_json=json.dumps(tool_calls) if tool_calls else None,
                 started_at=datetime.now(timezone.utc),
                 finished_at=datetime.now(timezone.utc),
             )

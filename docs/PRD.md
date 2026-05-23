@@ -77,7 +77,7 @@
 ├── 收件箱        必读 / 请示 / 待批 · 待办·已办·归档 · HITL 批准/驳回
 ├── 经营          收入 / Token 成本 / 毛利 / 项目盈亏 / 按角色·周
 ├── 周报          CEO 一页纸（Pipeline·待决·经营快照·五部门摘要）
-├── 设置          五角色模型/API/预算（Mock 只读 → Phase 2 可写）
+├── 设置          系统设置（Founder/编排/Skill Hub/MCP）+ 角色设置（身份/Profile/多模型/Skill 绑定）→ 见 `SETTINGS-PLATFORM-ROADMAP.md`
 └── CEO FAB       简报投递 + 对话线程 + 渠道状态 + 周报入口
 ```
 
