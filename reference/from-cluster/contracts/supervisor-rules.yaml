@@ -1,0 +1,78 @@
+# Supervisor 调度规则
+
+version: "1.0"
+
+modes:
+  supervisor:
+    description: 值班调度 Agent 只做分派与汇总，不替代专业角色深度工作
+  pipeline:
+    description: 固定 DAG，节点内可调 LLM
+  escalation:
+    description: 置信度低、合规命中、超预算 → 冻结下游 + HITL
+
+routing:
+  - trigger: new_client_project
+    steps:
+      - role: product
+        output: [prd, acceptance, product-to-dev, product-to-legal]
+        hitl: prd_scope
+      - role: legal
+        parallel_with: null
+        requires: [product-to-legal]
+        output: [quote-draft, contract-summary, dpa-checklist, legal-to-founder]
+        hitl: [quote, contract]
+      - role: dev
+        requires: [product-to-dev.approved]
+        output: [poc, integration-checklist, eval-report]
+        hitl: production
+      - role: ops
+        output: [project-status]
+      - role: ceo
+        when: pipeline_complete
+        output: [decision-memo]
+
+  - trigger: opc_weekly_subsidy
+    steps:
+      - role: ops
+        output: [weekly-report, subsidy-reconciliation, ops-to-legal]
+      - role: legal
+        requires: [ops-to-legal]
+        output: [subsidy-compliance-note]
+        hitl: subsidy
+      - role: ceo
+        output: [weekly-decision-memo]
+
+escalation_rules:
+  - condition: token_budget_exceeded
+    action: freeze_downstream
+    notify: [founder, ceo]
+  - condition: compliance_red_line
+    action: freeze_downstream
+    notify: [founder, legal]
+  - condition: reconciliation_variance_nonzero
+    action: require_hitl
+    hitl_type: subsidy
+  - condition: confidence_below
+    threshold: 0.7
+    action: require_hitl
+    notify: [founder]
+
+hitl_gates:
+  prd_scope:
+    role: founder
+    blocks: [dev, legal.quote]
+  quote:
+    role: founder
+    blocks: [outbound_to_client]
+  contract:
+    role: founder
+    blocks: [outbound_to_client]
+  subsidy:
+    role: founder
+    blocks: [subsidy_payout]
+  outbound:
+    role: founder
+    blocks: [customer_message]
+  production:
+    role: founder
+    blocks: [deploy_production]

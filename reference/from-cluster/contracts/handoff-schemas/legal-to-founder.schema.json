@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "legal-to-founder",
+  "type": "object",
+  "required": ["handoff_id", "project_id", "hitl_types", "status"],
+  "properties": {
+    "handoff_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "quote_path": { "type": "string" },
+    "contract_path": { "type": "string" },
+    "dpa_path": { "type": "string" },
+    "hitl_types": {
+      "type": "array",
+      "items": { "enum": ["quote", "contract", "subsidy", "outbound", "production"] }
+    },
+    "status": { "enum": ["pending_hitl", "approved", "rejected"] }
+  }
+}

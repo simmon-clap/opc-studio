@@ -1,8 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
-PORT="${PORT:-8765}"
-echo "OPC Studio Mock 看板 → http://localhost:${PORT}/dashboards/app/"
-echo "架构讨论稿 → http://localhost:${PORT}/architecture.html"
+
+if [ -f .env ]; then
+  # shellcheck disable=SC1091
+  set -a && source .env && set +a
+fi
+
+PORT="${OPC_PORT:-${PORT:-8765}}"
+HOST="${OPC_HOST:-127.0.0.1}"
+VERSION="$(tr -d '[:space:]' < VERSION 2>/dev/null || echo dev)"
+
+if [ ! -d ".venv" ]; then
+  python3 -m venv .venv
+fi
+# shellcheck disable=SC1091
+source .venv/bin/activate
+pip install -q -e backend/
+
+export PYTHONPATH="${PWD}/backend/app"
+echo "Golden Mean Studio v${VERSION}"
+echo "→ http://${HOST}:${PORT}/dashboards/app/"
+echo "→ API http://${HOST}:${PORT}/docs"
 echo "按 Ctrl+C 停止"
-exec python3 -m http.server "$PORT"
+exec uvicorn app.main:app --host "$HOST" --port "$PORT"

@@ -1,0 +1,33 @@
+# L3 交付闭环 · 可执行 DAG（与 star-api deck 一致）
+name: l3-delivery
+version: "1.0"
+
+nodes:
+  - id: discovery
+    role: product
+    label: 场景共创
+    hitl: prd_scope
+  - id: poc
+    role: dev
+    label: 智能体 PoC
+    depends_on: [discovery]
+    sla_weeks: 4
+  - id: integrate
+    role: dev
+    label: 集成上线
+    depends_on: [poc]
+    hitl: production
+  - id: operate
+    role: ops
+    label: 运营迭代
+    depends_on: [integrate]
+
+parallel:
+  - id: legal_track
+    role: legal
+    label: 合规与合同
+    depends_on: [discovery]
+
+infra:
+  - tkn_l1: required
+  - tkn_l2: optional

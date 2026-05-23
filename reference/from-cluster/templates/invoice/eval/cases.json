@@ -1,0 +1,29 @@
+{
+  "vertical": "invoice",
+  "target_f1": 0.92,
+  "cases": [
+    {
+      "id": "vat_invoice_01",
+      "file": "fixtures/vat_01.pdf",
+      "expected": {
+        "invoice_code": "044001900111",
+        "amount_cents": 113000,
+        "tax_rate": 0.13
+      }
+    },
+    {
+      "id": "vat_invoice_02",
+      "file": "fixtures/vat_02.pdf",
+      "expected": {
+        "invoice_code": "044001900222",
+        "amount_cents": 56000,
+        "tax_rate": 0.06
+      }
+    },
+    {
+      "id": "edge_blur_01",
+      "file": "fixtures/blur_01.jpg",
+      "expected": { "requires_hitl": true }
+    }
+  ]
+}

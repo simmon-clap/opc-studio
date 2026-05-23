@@ -1,0 +1,15 @@
+{
+  "name": "@opc/orchestration",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OPC internal agent cluster orchestration MVP",
+  "scripts": {
+    "new-project": "node src/cli.js new-project",
+    "pipeline": "node src/cli.js pipeline",
+    "workflow": "node src/cli.js workflow",
+    "hitl": "node src/cli.js hitl",
+    "metrics": "node src/cli.js metrics",
+    "opc-weekly": "node src/cli.js workflow -- opc-weekly-subsidy"
+  }
+}

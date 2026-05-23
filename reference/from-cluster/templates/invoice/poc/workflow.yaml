@@ -1,0 +1,19 @@
+name: invoice-accounting-poc
+version: "1.0"
+
+nodes:
+  - id: ingest
+    type: input
+    formats: [pdf, jpg, png]
+  - id: ocr
+    tool: ocr_extract
+  - id: structure
+    model: ${TKN_MODEL:-gpt-4o}
+    endpoint: ${TKN_BASE_URL}
+  - id: map_account
+    tool: chart_lookup
+    config: chart_of_accounts.csv
+  - id: erp_draft
+    tool: erp_write_draft
+  - id: hitl_accountant
+    type: human_gate

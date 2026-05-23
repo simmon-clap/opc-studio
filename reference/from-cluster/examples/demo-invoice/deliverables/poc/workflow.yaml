@@ -1,0 +1,12 @@
+name: invoice-accounting-poc
+nodes:
+  - id: ocr
+    tool: ocr_extract
+  - id: structure
+    model: tkn-l1
+  - id: map_account
+    tool: chart_lookup
+  - id: erp_draft
+    tool: erp_write_draft
+  - id: hitl_review
+    type: human_gate

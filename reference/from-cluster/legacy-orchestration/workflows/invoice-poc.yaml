@@ -1,0 +1,23 @@
+# 发票财务垂直 · PoC DAG
+name: invoice-poc
+vertical: invoice
+version: "1.0"
+
+nodes:
+  - id: ocr
+    tool: ocr_extract
+    timeout_sec: 30
+  - id: structure
+    model: tkn-l1
+    prompt_template: templates/invoice/poc/prompts/structure.txt
+  - id: map_account
+    tool: chart_lookup
+  - id: erp_draft
+    tool: erp_write_draft
+  - id: accountant_hitl
+    type: human_gate
+    role: customer_accountant
+
+eval:
+  dataset: templates/invoice/eval/cases.json
+  target_f1: 0.92

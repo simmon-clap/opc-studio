@@ -1,0 +1,16 @@
+{
+  "date": "2026-05-21",
+  "decisions": [
+    {
+      "project_id": "startup-bob",
+      "decision": "go",
+      "priority": 2
+    },
+    {
+      "project_id": "opc-subsidy",
+      "decision": "defer",
+      "priority": 1,
+      "reason": "reconciliation variance"
+    }
+  ]
+}

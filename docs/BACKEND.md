@@ -65,7 +65,7 @@
 | 部署（云端，可选） | 同进程 + systemd + Caddy HTTPS | 以后上云时再加，代码不变 |
 | 进程 | **uvicorn** + `--workers 1` | SQLite 写并发简单，单 worker 足够 |
 
-Phase 3 再引入：**LangGraph / 自研 YAML Runner** 跑真 Agent，与 Phase 2 API 解耦。
+Phase 3 再引入：**Orchestrator + Role Runners**（见 [AGENTS.md](./AGENTS.md)）；LangGraph 备选。
 
 ---
 
@@ -480,5 +480,7 @@ async function init() {
 
 - [PRD.md](./PRD.md) — 产品需求 v0.3
 - [API.md](./API.md) — **前后端 API 契约（开发基准）**
+- [AGENTS.md](./AGENTS.md) — **Agent 编排与协作设计**
+- [IMPLEMENTATION.md](./IMPLEMENTATION.md) — Phase 2/3 实施计划与验收
 - [architecture.html](../architecture.html) — 业务全景 v3
 - [README.md](../README.md) — 启动说明

@@ -1,0 +1,12 @@
+{
+  "handoff_id": "ptd-demo",
+  "project_id": "demo-invoice",
+  "vertical": "invoice",
+  "prd_path": "deliverables/prd.md",
+  "acceptance_path": "deliverables/acceptance-criteria.md",
+  "data_boundary": "invoice images L2; chart of accounts L1",
+  "poc_deadline_weeks": 3,
+  "status": "approved",
+  "approved_by": "founder",
+  "approved_at": "2026-05-21T04:00:00.000Z"
+}

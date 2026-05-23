@@ -1,0 +1,12 @@
+{
+  "handoff_id": "ltf-1779336004471",
+  "project_id": "demo-invoice",
+  "quote_path": "deliverables/quote-draft.md",
+  "contract_path": "deliverables/contract-summary.md",
+  "dpa_path": "deliverables/dpa-checklist.md",
+  "hitl_types": [
+    "quote",
+    "contract"
+  ],
+  "status": "pending_hitl"
+}

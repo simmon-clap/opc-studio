@@ -1,0 +1,19 @@
+# Cloudflare Tunnel — expose local OPC Studio without buying a VPS.
+# Docs: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/
+#
+# Quick try (ephemeral URL, no account config file):
+#   cloudflared tunnel --url http://127.0.0.1:8765
+#
+# Named tunnel (stable subdomain on your zone):
+#   1. cloudflared tunnel login
+#   2. cloudflared tunnel create opc-studio
+#   3. Copy tunnel UUID below, set hostname in Cloudflare DNS
+#   4. cloudflared tunnel run opc-studio
+
+tunnel: <TUNNEL-UUID>
+credentials-file: /opt/opc-studio/deploy/cloudflare/<TUNNEL-UUID>.json
+
+ingress:
+  - hostname: studio.example.com
+    service: http://127.0.0.1:8765
+  - service: http_status:404

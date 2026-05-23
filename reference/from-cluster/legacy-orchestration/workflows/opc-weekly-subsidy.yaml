@@ -1,0 +1,29 @@
+# OPC 社区 · 周报 + 补贴对账（狗食工作流）
+name: opc-weekly-subsidy
+version: "1.0"
+trigger: cron
+schedule: "0 9 * * 1"
+
+nodes:
+  - id: fetch_data
+    role: ops
+    inputs:
+      - opc-community/data/members.json
+      - opc-community/data/usage.json
+      - opc-community/data/subsidy-pool.json
+  - id: weekly_report
+    role: ops
+    output: opc-community/reports/weekly-{week}.md
+  - id: reconciliation
+    role: ops
+    output: opc-community/reports/subsidy-reconciliation-{month}.md
+    handoff: ops-to-legal.json
+  - id: legal_review
+    role: legal
+    depends_on: [reconciliation]
+    hitl: subsidy
+    when: variance_cents != 0
+  - id: ceo_brief
+    role: ceo
+    depends_on: [weekly_report, legal_review]
+    output: company/decisions/weekly-{date}.md

@@ -1,0 +1,8 @@
+{
+  "name": "@opc/template-invoice-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "eval": "node eval-run.mjs"
+  }
+}

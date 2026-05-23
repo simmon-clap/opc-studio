@@ -1,0 +1,20 @@
+[Unit]
+Description=OPC Studio (Golden Mean) API + Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=opc
+Group=opc
+WorkingDirectory=/opt/opc-studio
+EnvironmentFile=/opt/opc-studio/.env
+Environment=PYTHONPATH=/opt/opc-studio/backend/app
+ExecStart=/opt/opc-studio/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8765
+Restart=always
+RestartSec=5
+
+# Hardening (adjust if needed)
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

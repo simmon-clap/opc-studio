@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "product-to-legal",
+  "type": "object",
+  "required": ["handoff_id", "project_id", "contains_pii", "data_classes", "status"],
+  "properties": {
+    "handoff_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "contains_pii": { "type": "boolean" },
+    "data_classes": { "type": "array", "items": { "enum": ["L0", "L1", "L2", "L3"] } },
+    "retention_days": { "type": "integer" },
+    "cross_border": { "type": "boolean" },
+    "status": { "enum": ["draft", "pending_hitl", "approved", "rejected"] }
+  }
+}

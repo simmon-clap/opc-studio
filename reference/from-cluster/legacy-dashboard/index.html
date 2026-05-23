@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OPC Agent 集群 · 内部指标</title>
+  <style>
+    :root { --bg: #0f1419; --card: #1a2332; --text: #e7ecf3; --muted: #8b9cb3; --accent: #3d5afe; --ok: #00c853; --warn: #ffab00; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 2rem; }
+    h1 { font-weight: 600; font-size: 1.5rem; margin: 0 0 0.25rem; }
+    .sub { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .card { background: var(--card); border-radius: 8px; padding: 1.25rem; }
+    .card .label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .card .value { font-size: 2rem; font-weight: 200; margin-top: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid #2a3548; }
+    th { color: var(--muted); font-weight: 500; }
+    .section { margin-top: 2rem; }
+    .section h2 { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; }
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; }
+    .badge.ok { background: rgba(0,200,83,0.2); color: var(--ok); }
+    .badge.warn { background: rgba(255,171,0,0.2); color: var(--warn); }
+    #err { color: #ff5252; }
+  </style>
+</head>
+<body>
+  <h1>OPC 内部 Agent 集群</h1>
+  <p class="sub">指标看板 · 数据来自 <code>dashboards/metrics.json</code>（<code>npm run metrics</code> 生成）</p>
+  <div id="err"></div>
+  <div class="grid" id="kpis"></div>
+  <div class="section">
+    <h2>PoC 周期（天）</h2>
+    <table><thead><tr><th>项目</th><th>天数</th></tr></thead><tbody id="poc-rows"></tbody></table>
+  </div>
+  <div class="section">
+    <h2>Token 消耗（按角色）</h2>
+    <table><thead><tr><th>角色</th><th>Tokens</th></tr></thead><tbody id="token-rows"></tbody></table>
+  </div>
+  <div class="section">
+    <h2>Pipeline 转化</h2>
+    <table><thead><tr><th>阶段</th><th>数量</th></tr></thead><tbody id="pipe-rows"></tbody></table>
+  </div>
+  <script>
+    async function load() {
+      try {
+        const r = await fetch('metrics.json?' + Date.now());
+        if (!r.ok) throw new Error('metrics.json 不存在，请在 orchestration/ 运行 npm run metrics');
+        const m = await r.json();
+        document.getElementById('kpis').innerHTML = [
+          ['总 Token（30d）', m.token_cost?.total_tokens ?? 0],
+          ['HITL 待审', m.hitl?.pending ?? 0],
+          ['HITL 已通过', m.hitl?.approved ?? 0],
+          ['HITL 待改率 %', m.hitl_edit_rate ?? 0],
+          ['PoC 项目数', m.pipeline_conversion?.poc ?? 0],
+          ['成交', m.pipeline_conversion?.won ?? 0],
+        ].map(([label, value]) =>
+          `<div class="card"><div class="label">${label}</div><div class="value">${value}</div></div>`
+        ).join('');
+        const poc = m.poc_cycles || [];
+        document.getElementById('poc-rows').innerHTML = poc.length
+          ? poc.map(p => `<tr><td>${p.project_id}</td><td>${p.days} <span class="badge ${p.days <= 28 ? 'ok' : 'warn'}">${p.days <= 28 ? '达标' : '超期'}</span></td></tr>`).join('')
+          : '<tr><td colspan="2">暂无数据</td></tr>';
+        const byRole = m.token_cost?.by_role || {};
+        document.getElementById('token-rows').innerHTML = Object.entries(byRole).length
+          ? Object.entries(byRole).map(([k,v]) => `<tr><td>${k}</td><td>${v.toLocaleString()}</td></tr>`).join('')
+          : '<tr><td colspan="2">暂无</td></tr>';
+        const pc = m.pipeline_conversion || {};
+        document.getElementById('pipe-rows').innerHTML = [
+          ['线索', pc.leads], ['PoC', pc.poc], ['成交', pc.won],
+        ].map(([k,v]) => `<tr><td>${k}</td><td>${v ?? 0}</td></tr>`).join('');
+      } catch (e) {
+        document.getElementById('err').textContent = e.message;
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

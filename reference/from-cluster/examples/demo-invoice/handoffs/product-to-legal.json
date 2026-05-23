@@ -1,0 +1,11 @@
+{
+  "handoff_id": "ptl-1779336004468",
+  "project_id": "demo-invoice",
+  "contains_pii": false,
+  "data_classes": [
+    "L2"
+  ],
+  "retention_days": 90,
+  "cross_border": false,
+  "status": "approved"
+}

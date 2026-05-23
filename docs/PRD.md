@@ -551,7 +551,7 @@ Web 看板（CEO FAB + 收件箱）
 
 ## 16. Phase 2 后端需求（Founder 确认项）
 
-详见 **[docs/BACKEND.md](./BACKEND.md)** 与 **[docs/API.md](./API.md)**，摘要：
+详见 **[docs/BACKEND.md](./BACKEND.md)**、**[docs/API.md](./API.md)** 与 **[docs/IMPLEMENTATION.md](./IMPLEMENTATION.md)**，摘要：
 
 | # | 需求 | 方案 |
 |---|------|------|
@@ -572,4 +572,5 @@ Web 看板（CEO FAB + 收件箱）
 - [x] 云端 **可选**（将来域名 + VPS，非 Phase 2 前提）
 - [x] 渠道：**飞书优先**，微信后置
 - [x] API 契约 v1.0（Mock JSON = 黄金样本，见 API.md）
-- [ ] 确认后开始 Phase 2a 后端骨架
+- [x] Phase 2 实施计划草案（IMPLEMENTATION.md · 待确认）
+- [ ] 确认实施计划后开始 Phase 2a

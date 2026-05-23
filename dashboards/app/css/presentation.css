@@ -1,0 +1,28 @@
+/* Presentation blocks — CEO thread, status cards */
+.rich-text .pb-paragraph { margin: 0 0 0.5rem; line-height: 1.5; }
+.rich-text .pb-paragraph:last-child { margin-bottom: 0; }
+.rich-text .pb-heading {
+  font-size: 0.72rem; font-weight: 700; color: var(--text2);
+  margin: 0.5rem 0 0.25rem;
+}
+.rich-text .pb-heading:first-child { margin-top: 0; }
+.rich-text .pb-list { margin: 0.15rem 0 0.5rem 1rem; padding: 0; }
+.rich-text .pb-list li { margin: 0.2rem 0; line-height: 1.45; }
+.rich-text .pb-callout {
+  font-size: 0.72rem; line-height: 1.45; padding: 0.45rem 0.55rem;
+  border-radius: 10px; margin: 0.4rem 0;
+}
+.rich-text .pb-callout.tone-info { background: rgba(0,113,227,0.08); color: var(--text2); }
+.rich-text .pb-callout.tone-muted { background: rgba(0,0,0,0.04); color: var(--text3); }
+.rich-text .pb-task-row {
+  display: grid; grid-template-columns: 3.2rem 1fr auto; gap: 0.35rem;
+  align-items: baseline; padding: 0.35rem 0; border-bottom: 1px solid rgba(0,0,0,0.04);
+  font-size: 0.74rem;
+}
+.rich-text .pb-task-row:last-child { border-bottom: none; }
+.rich-text .pb-task-role { font-weight: 700; color: var(--accent); }
+.rich-text .pb-task-title { color: var(--text); }
+.rich-text .pb-task-status {
+  font-size: 0.62rem; font-weight: 700; color: var(--green);
+  white-space: nowrap;
+}

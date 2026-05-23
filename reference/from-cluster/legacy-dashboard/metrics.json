@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-05-21T04:00:04.483Z",
+  "poc_cycles": [
+    {
+      "project_id": "demo-invoice",
+      "days": 20.2
+    }
+  ],
+  "token_cost": {
+    "by_project": {
+      "opc-community": 9620,
+      "demo-invoice": 47970
+    },
+    "by_role": {
+      "ops": 4030,
+      "legal": 18200,
+      "ceo": 1950,
+      "product": 21840,
+      "dev": 11570
+    },
+    "total_tokens": 57590
+  },
+  "hitl": {
+    "pending": 7,
+    "approved": 1
+  },
+  "pipeline_conversion": {
+    "leads": 1,
+    "poc": 1,
+    "won": 0
+  },
+  "hitl_edit_rate": 88
+}
