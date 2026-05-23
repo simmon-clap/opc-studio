@@ -1,8 +1,9 @@
 """Phase C — proposal dispatch, auto-dispatch, deliberate."""
 
-import asyncio
-
 from app.agency.auto_dispatch import apply_auto_dispatch, should_auto_dispatch
+from app.agency.deliberate import deliberate_merge_proposals
+from app.agency.proposal_actions import execute_proposal_dispatch
+from app.services.dashboard_store import mutate
 
 
 def _proposal_item(**overrides):

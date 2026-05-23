@@ -34,6 +34,8 @@ from app.db import init_db, session_scope
 from app.pulse.coordinator import get_pulse_coordinator, start_pulse_loop
 from app.pulse.modules.reconcile import tick_reconcile
 from app.seed import seed_if_needed
+from app.services.dashboard_store import mutate
+from app.services.inbox_dedup import dedupe_active_inbox
 
 
 @asynccontextmanager
@@ -42,6 +44,8 @@ async def lifespan(app: FastAPI):
     with session_scope() as session:
         seed_if_needed(session)
         tick_reconcile(session)
+        with mutate(session) as dashboard:
+            dedupe_active_inbox(dashboard)
     await start_pulse_loop()
     yield
     await get_pulse_coordinator().stop()

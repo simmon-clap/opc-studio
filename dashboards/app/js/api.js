@@ -60,6 +60,34 @@ async function postCeoBrief(text, files = []) {
   return apiPost("/ceo/brief", { text: trimmed });
 }
 
+async function probeApiCapabilities() {
+  try {
+    const json = await apiGet("/health");
+    const caps = json.capabilities;
+    if (!caps) {
+      showApiStaleBanner(["工作室", "优先级调整"]);
+      return null;
+    }
+    const missing = [];
+    if (!caps.workroom) missing.push("工作室");
+    if (!caps.projectPatch) missing.push("优先级调整");
+    if (missing.length) showApiStaleBanner(missing);
+    return caps;
+  } catch (_) {
+    return null;
+  }
+}
+
+function showApiStaleBanner(features) {
+  const id = "api-stale-banner";
+  if (document.getElementById(id)) return;
+  const el = document.createElement("div");
+  el.id = id;
+  el.className = "api-stale-banner";
+  el.innerHTML = `<strong>后端版本过旧</strong> · ${features.join("、")} 不可用。请在终端 <code>Ctrl+C</code> 停止旧进程后运行 <code>./start.sh</code> 重启。`;
+  document.body.prepend(el);
+}
+
 async function loadDashboard() {
   const json = await apiGet("/dashboard");
   return json.data;

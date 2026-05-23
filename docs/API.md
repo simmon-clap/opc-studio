@@ -192,6 +192,10 @@ Phase 2 本地：**无 Header**。绑定 `127.0.0.1` 即可。
 | PUT | `/api/v1/projects/{id}/artifacts/{aid}/content` | 更新正文（Agent/人工） | 2b |
 | POST | `/api/v1/projects/{id}/artifacts` | 新建产出物 | 2b |
 | GET | `/api/v1/projects/{id}/export` | 下载 ZIP（query: `type=internal\|client`） | 2c |
+| GET | `/api/v1/projects/{id}/workroom` | 工作室聚合（header、groups、focus、exportMenu） | v2 |
+| GET | `/api/v1/projects/{id}/next-steps` | `{ focus, others }` 流程 cue | v2 |
+
+**Workroom v2：** 产出物 GET 响应含 `actions[]`、`exportFormats[]`；详见 [WORKROOM-V2.md](./WORKROOM-V2.md)。
 
 **文件存储：** 正文不在 JSON 里持久化到 DB；API 读写 `data/projects/{id}/artifacts/{aid}.md`。
 

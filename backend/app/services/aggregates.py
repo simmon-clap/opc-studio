@@ -176,7 +176,10 @@ def recompute_role_live_state(dashboard: dict[str, Any]) -> None:
         elif running:
             role["workStatus"] = "working"
         elif pending:
-            role["workStatus"] = "waiting"
+            if all(t.get("waitingOn") for t in pending):
+                role["workStatus"] = "waiting"
+            else:
+                role["workStatus"] = "working"
         else:
             role["workStatus"] = "idle"
 
@@ -205,7 +208,7 @@ def recompute_role_live_state(dashboard: dict[str, Any]) -> None:
                     )
             nxt = _pending_next(pending)
             parts.append(
-                f"排队 {len(pending)} 项 · 下一项：{(nxt.get('title') or '待调度')[:36]}"
+                f"队列 {len(pending)} 项 · 下一项：{(nxt.get('title') or '待执行')[:36]}"
             )
             role["focus"] = " · ".join(parts)
         elif done_recent:
@@ -227,9 +230,11 @@ def recompute_role_live_state(dashboard: dict[str, Any]) -> None:
 
 
 from app.presentation.derived import recompute_presentation
+from app.presentation.project_progress import recompute_projects_progress
 
 
 def recompute_all(dashboard: dict[str, Any]) -> None:
+    recompute_projects_progress(dashboard)
     recompute_pulse(dashboard)
     recompute_stats(dashboard)
     recompute_role_live_state(dashboard)

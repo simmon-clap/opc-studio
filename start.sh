@@ -16,7 +16,7 @@ if [ ! -d ".venv" ]; then
 fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
-pip install -q -e backend/
+pip install -q -e backend/ || echo "⚠ pip install 跳过（沿用已有 venv）；若 API 405/404 请手动 pip install -e backend/ 后重启"
 
 export PYTHONPATH="${PWD}/backend/app"
 echo "Golden Mean Studio v${VERSION}"

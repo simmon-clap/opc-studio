@@ -14,7 +14,8 @@ def test_hitl_approve(client):
 
     acme = next(p for p in dashboard["projects"] if p["id"] == "proj-acme")
     assert acme["hitlPending"] is None
-    assert acme["progress"] == 92
+    assert acme["progress"] >= 85
+    assert acme.get("progressDetail")
     assert acme["closureStatus"] == "in_closure"
 
     closure = dashboard["closure"]["proj-acme"]

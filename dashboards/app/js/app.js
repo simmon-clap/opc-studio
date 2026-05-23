@@ -80,6 +80,7 @@ function applyBrandMeta() {
 }
 
 async function init() {
+  probeApiCapabilities();
   data = await loadDashboard();
   lastSyncAt = Date.now();
   applyBrandMeta();
@@ -139,6 +140,9 @@ async function handlePulseStream(payload) {
     renderOverview();
   } else if (needPresentation || needInbox) {
     renderActiveView();
+  } else if (needExecution) {
+    updateBadges();
+    if (view === "projects") renderProjects();
   } else {
     updateBadges();
   }
@@ -148,6 +152,13 @@ async function handlePulseStream(payload) {
   }
   if (document.querySelector(".ceo-office")) {
     updateCeoThreadPane();
+  }
+  if (workroomProjectId && !document.getElementById("sheet-backdrop").hidden) {
+    if (typeof isWorkroomUiInteractive === "function" && isWorkroomUiInteractive()) {
+      if (typeof loadWorkroomData === "function") await loadWorkroomData(workroomProjectId);
+    } else {
+      await syncWorkroomAfterRefresh();
+    }
   }
 }
 
@@ -203,16 +214,11 @@ async function tickLiveSync() {
       updateCeoThreadPane();
     }
     if (workroomProjectId && !document.getElementById("sheet-backdrop").hidden) {
-      document.getElementById("workroom-nav").innerHTML = renderWorkroomNavGrouped(
-        workroomProjectId,
-        workroomArtifactId
-      );
-      renderWorkroomArtifactContent();
-      renderWorkroomDeliberation();
-      renderWorkroomClosure();
-      renderWorkroomFinance();
-      renderWorkroomBriefPanel(workroomProjectId);
-      renderWorkroomNextSteps(workroomProjectId);
+      if (typeof isWorkroomUiInteractive === "function" && isWorkroomUiInteractive()) {
+        if (typeof loadWorkroomData === "function") await loadWorkroomData(workroomProjectId);
+      } else {
+        await syncWorkroomAfterRefresh();
+      }
     }
   } catch (_) {
     /* offline / server restarting */
@@ -320,9 +326,28 @@ function openModal(html, className = "") {
   document.body.style.overflow = "hidden";
 }
 
+function showRoleModalStacked(roleId) {
+  openRoleId = roleId;
+  const backdrop = document.getElementById("modal-backdrop");
+  refreshDashboard()
+    .then(() => {
+      renderRoleModal(roleId);
+      backdrop.classList.add("modal-stacked");
+      backdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+    })
+    .catch(() => {
+      renderRoleModal(roleId);
+      backdrop.classList.add("modal-stacked");
+      backdrop.hidden = false;
+    });
+}
+
 function closeModal() {
-  document.getElementById("modal-backdrop").hidden = true;
-  document.body.style.overflow = "";
+  const backdrop = document.getElementById("modal-backdrop");
+  backdrop.hidden = true;
+  backdrop.classList.remove("modal-stacked");
+  document.body.style.overflow = document.getElementById("sheet-backdrop")?.hidden ? "" : "hidden";
   openRoleId = null;
 }
 
@@ -339,6 +364,16 @@ function closeSheet() {
 
 function getProject(id) { return data.projects.find((p) => p.id === id); }
 function getRole(id) { return data.roles.find((r) => r.id === id); }
+
+const KNOWN_AVATAR_ROLES = new Set(["ceo", "product", "legal", "dev", "ops"]);
+function avatarSrc(roleId) {
+  const id = KNOWN_AVATAR_ROLES.has(roleId) ? roleId : "ceo";
+  return `../../assets/avatars/${id}.png`;
+}
+function avatarLabel(roleId) {
+  if (roleId === "founder") return "Founder";
+  return getRole(roleId)?.name || roleId;
+}
 function getClient(id) { return data.clients?.find((c) => c.id === id); }
 function getArtifact(id) { return data.artifacts.find((a) => a.id === id); }
 function getClosure(projectId) { return data.closure?.[projectId]; }
@@ -365,11 +400,12 @@ function channelBadge(ch) {
   return `<span class="channel-badge channel-${ch}">${c.label}</span>`;
 }
 
-function progressRing(pct, size = 44, sw = 3) {
+function progressRing(pct, size = 44, sw = 3, tone = "") {
   const r = (size - sw) / 2;
   const c = 2 * Math.PI * r;
   const off = c - (pct / 100) * c;
-  return `<svg class="progress-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  const cls = tone ? ` progress-ring-${tone}` : "";
+  return `<svg class="progress-ring${cls}" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
     <circle class="bg" cx="${size/2}" cy="${size/2}" r="${r}"/>
     <circle class="fg" cx="${size/2}" cy="${size/2}" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${off}"/>
   </svg>`;
@@ -378,10 +414,21 @@ function progressRing(pct, size = 44, sw = 3) {
 function assigneeAvatars(ids, max = 4) {
   const html = ids.slice(0, max).map((id) => {
     const r = getRole(id);
-    return r ? `<img src="../../assets/avatars/${id}.png" alt="${r.name}" title="${r.name}"/>` : "";
+    return r ? `<img src="${avatarSrc(id)}" alt="${escapeAttr(r.name)}" title="${escapeAttr(r.name)}"/>` : "";
   }).join("");
   const more = ids.length > max ? `<span class="more">+${ids.length - max}</span>` : "";
   return `<div class="assignees">${html}${more}</div>`;
+}
+
+/** 可点击头像（工作室等）；用 span 避免嵌套在 button 内破坏 DOM */
+function assigneeAvatarsInteractive(ids, max = 4, size = 22) {
+  const html = ids.slice(0, max).map((id) => {
+    const r = getRole(id);
+    if (!r) return "";
+    return `<span class="avatar-hit" style="width:${size}px;height:${size}px" role="button" tabindex="0" title="${escapeAttr(r.name)}" onclick="event.stopPropagation();showRoleModalStacked('${id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();showRoleModalStacked('${id}')}"><img src="${avatarSrc(id)}" alt="${escapeAttr(r.name)}"/></span>`;
+  }).join("");
+  const more = ids.length > max ? `<span class="more">+${ids.length - max}</span>` : "";
+  return `<div class="assignees assignees-sm">${html}${more}</div>`;
 }
 
 function formatChatMessage(text) {
@@ -864,7 +911,14 @@ function renderProjects() {
     const artCount = data.artifacts.filter((a) => a.projectId === p.id).length;
     const closure = getClosure(p.id);
     const pnl = getProjectPnL(p.id);
-    const stageLabel = (p.stage || "").replace(/阶段\d · /, "") || "—";
+    const pd = p.progressDetail || {};
+    const stageLabel = pd.stageShort || (p.stage || "").replace(/阶段\d · /, "") || "—";
+    const execLine = pd.executionNote
+      ? `<div class="stage-exec">${pd.executionNote.slice(0, 42)}${pd.executionNote.length > 42 ? "…" : ""}</div>`
+      : pd.runningTaskCount
+        ? `<div class="stage-exec">${pd.runningTaskCount} 项执行中</div>`
+        : "";
+    const ringPct = pd.executionProgress != null ? pd.executionProgress : (p.progress || 0);
     const tags = [
       pnl ? renderProjectPnLBadge(pnl) : "",
       p.hitlPending ? `<span class="project-tag tag-hitl">${p.hitlPending} 待批</span>` : "",
@@ -873,16 +927,17 @@ function renderProjects() {
         : "",
     ].filter(Boolean);
     return `
-    <button class="project-card glass" onclick="openWorkroom('${p.id}')">
+    <button class="project-card glass${p.hitlPending ? " has-hitl" : ""}" onclick="openWorkroom('${p.id}')">
       <div class="project-top">
         <div class="project-name">${p.clientName.replace("（线索）", "")}</div>
         <span class="priority pri-${p.priority}">${p.priority}</span>
       </div>
       <div class="project-progress">
-        ${progressRing(p.progress || 0)}
+        ${progressRing(ringPct, 44, 3, p.hitlPending ? "warn" : "")}
         <div class="progress-meta">
-          <div class="pct">${p.progress || 0}%</div>
-          <div class="stage">${stageLabel}</div>
+          <div class="pct">${stageLabel}</div>
+          <div class="stage">阶段 ${pd.stageIndex || "?"} · ${p.progress || 0}%</div>
+          ${execLine}
         </div>
       </div>
       <div class="project-tags">${tags.join("") || '<span class="project-tag tag-empty">—</span>'}</div>
@@ -995,6 +1050,7 @@ function showStatsModal(filter) {
 
 /* ── Workroom (A) ── */
 function openWorkroom(projectId, artifactId) {
+  if (workroomProjectId !== projectId) briefEditOpen = false;
   workroomProjectId = projectId;
   workroomArtifactId = artifactId || null;
   refreshDashboard()
@@ -1002,26 +1058,40 @@ function openWorkroom(projectId, artifactId) {
     .catch(() => renderWorkroomShell(projectId, artifactId));
 }
 
-function renderWorkroomShell(projectId, artifactId) {
+async function renderWorkroomShell(projectId, artifactId) {
   const p = getProject(projectId);
   if (!p) return;
+  const ui = typeof captureWorkroomUiState === "function" ? captureWorkroomUiState() : null;
   const arts = sortRoleTasksByRecency(
     data.artifacts.filter((a) => a.projectId === projectId)
   );
   workroomArtifactId = artifactId || workroomArtifactId || (arts[0]?.id);
 
   document.getElementById("sheet-title").textContent = p.clientName.replace("（线索）", "");
-  document.getElementById("sheet-progress").textContent = `${p.progress || 0}%`;
 
-  document.getElementById("workroom-nav").innerHTML = renderWorkroomNavGrouped(projectId, workroomArtifactId);
-
-  renderExportBar();
-  renderWorkroomDeliberation();
-  renderWorkroomClosure();
-  renderWorkroomFinance();
-  renderWorkroomBriefPanel(projectId);
-  renderWorkroomNextSteps(projectId);
+  await loadWorkroomData(projectId);
+  renderWorkroomHeader(
+    workroomData?.header || {
+      stage: p.stage,
+      stageShort: (p.progressDetail?.stageShort) || (p.stage || "").replace(/阶段\d · /, ""),
+      progress: p.progress,
+      progressDetail: p.progressDetail || {},
+      hitlPending: p.hitlPending,
+      priority: p.priority,
+      summary: p.summary,
+      agentDeliverable: p.agentDeliverable,
+      assignees: p.assignees || [],
+      exportMenu: workroomData?.exportMenu || [{ id: "internal", label: "内部完整包 ZIP" }],
+    }
+  );
+  document.getElementById("workroom-nav").innerHTML = renderWorkroomNavGrouped(
+    projectId,
+    workroomArtifactId,
+    workroomData
+  );
+  renderWorkroomFocus(workroomData);
   renderWorkroomArtifactContent();
+  if (typeof restoreWorkroomUiState === "function") restoreWorkroomUiState(ui);
   openSheet();
   requestAnimationFrame(() => {
     const el = document.getElementById("workroom-content");
@@ -1029,90 +1099,11 @@ function renderWorkroomShell(projectId, artifactId) {
   });
 }
 
-function renderWorkroomDeliberation() {
-  const panel = document.getElementById("deliberation-panel");
-  if (!panel || !workroomProjectId) return;
-  panel.hidden = true;
-  apiGet(`/projects/${workroomProjectId}/deliberation`)
-    .then((res) => {
-      const d = res.data;
-      if (!d || !d.turns?.length) return;
-      panel.hidden = false;
-      const turns = d.turns
-        .map(
-          (t) => `
-        <div class="delib-turn">
-          <span class="delib-author">${ROLE_SHORT[t.author] || t.author}</span>
-          <p>${t.content}</p>
-        </div>`
-        )
-        .join("");
-      panel.innerHTML = `
-        <div class="closure-head">
-          <div>
-            <div class="closure-title">CEO 会诊 · ${d.status === "open" ? "进行中" : "已收口"}</div>
-            <div class="closure-sub">${d.id}${d.decisionArtifactId ? ` · Memo ${d.decisionArtifactId}` : ""}</div>
-          </div>
-        </div>
-        <div class="delib-agenda">${(d.agenda || []).map((a) => `<span class="chip">${a}</span>`).join("")}</div>
-        <div class="delib-turns">${turns}</div>`;
-    })
-    .catch(() => {});
-}
-
-function renderWorkroomClosure() {
-  const panel = document.getElementById("closure-panel");
-  const p = getProject(workroomProjectId);
-  const cl = getClosure(workroomProjectId);
-  if (!panel || !cl) { if (panel) panel.hidden = true; return; }
-
-  const done = cl.checklist.filter((x) => x.done).length;
-  const total = cl.checklist.length;
-  panel.hidden = false;
-  panel.innerHTML = `
-    <div class="closure-head">
-      <div>
-        <div class="closure-title">结项清单</div>
-        <div class="closure-sub">${CLOSURE_STATUS[cl.status] || cl.status} · ${done}/${total}</div>
-      </div>
-      ${cl.status === "in_closure" ? `<button class="btn-primary btn-sm" onclick="exportClientDeliveryZip()">导出客户 ZIP</button>` : ""}
-      ${cl.status === "closed" ? `<span class="closure-closed">✓ ${cl.closedAt || "已结项"}</span>` : ""}
-    </div>
-    <div class="closure-list">
-      ${cl.checklist.map((item) => {
-        const role = getRole(item.roleId);
-        return `
-          <div class="closure-item ${item.done ? "done" : ""}">
-            <span class="closure-check">${item.done ? "☑" : "☐"}</span>
-            <span class="closure-label">${item.label}</span>
-            <span class="closure-role">${role?.name || ""}</span>
-          </div>`;
-      }).join("")}
-    </div>`;
-}
-
 function markClosureItem(projectId, itemId) {
   apiPatch(`/projects/${projectId}/closure/checklist/${itemId}`, { done: true })
     .then(() => refreshDashboard())
-    .then(() => renderWorkroomClosure())
+    .then(() => syncWorkroomAfterRefresh())
     .catch((e) => alert(`更新失败：${e.message}`));
-}
-
-function renderExportBar() {
-  const p = getProject(workroomProjectId);
-  const slug = (p?.clientName || "project").replace(/[^\w\u4e00-\u9fa5]+/g, "_").slice(0, 20);
-  document.getElementById("export-bar").innerHTML = `
-    <button class="export-btn" title="下载 MD" onclick="exportCurrentMd()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg>
-    </button>
-    <button class="export-btn" title="下载 PDF" onclick="exportCurrentPdf()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h2v3M16 13h-2c0 2 2 2 2 2"/></svg>
-    </button>
-    <button class="export-btn" title="导出 ZIP 项目包" onclick="exportProjectZip()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-    </button>
-    ${getClosure(workroomProjectId)?.status === "in_closure" ? `
-    <button class="export-btn" title="客户交付 ZIP" onclick="exportClientDeliveryZip()" style="width:auto;padding:0 0.5rem;font-size:0.68rem;color:var(--accent)">客户包</button>` : ""}`;
 }
 
 function slugify(name) {
@@ -1164,18 +1155,23 @@ async function exportClientDeliveryZip() {
   const name = `${slugify(p?.clientName)}_客户交付.zip`;
   await downloadBlobFromApi(`/projects/${workroomProjectId}/export?type=client`, name);
   await refreshDashboard();
-  renderWorkroomClosure();
+  await syncWorkroomAfterRefresh();
 }
 
 function selectArtifact(id) {
   workroomArtifactId = id;
+  workroomViewVersion = null;
   workroomSelectedFile = null;
   workroomDiffMode = false;
   workroomDiffFrom = null;
+  workroomDiffTo = null;
+  workroomDiffLines = null;
+  workroomEditMode = false;
+  workroomEditContent = null;
   const art = getArtifact(id);
-  if (art) { delete art._viewContent; delete art._diffLines; }
+  if (art) delete art._viewContent;
   document.querySelectorAll(".art-item").forEach((el) => el.classList.remove("active"));
-  document.querySelector(`.art-item[onclick="selectArtifact('${id}')"]`)?.classList.add("active");
+  document.querySelector(`.art-item[data-artifact-id="${id}"]`)?.classList.add("active");
   renderWorkroomArtifactContent();
   const el = document.getElementById("workroom-content");
   if (el) el.scrollTop = 0;
@@ -1228,10 +1224,9 @@ function renderInbox() {
 
   document.getElementById("inbox-list").innerHTML = items.length ? items.map((item) => {
     const fromId = item.from || "ceo";
-    const fromRole = getRole(fromId);
     return `
     <button type="button" class="inbox-card glass ${item.read ? "" : "unread"}" onclick="openInboxItem('${item.id}')">
-      <img class="inbox-avatar" src="../../assets/avatars/${fromId}.png" alt="${fromRole?.name || fromId}"/>
+      <img class="inbox-avatar" src="${avatarSrc(fromId)}" alt="${escapeAttr(avatarLabel(fromId))}"/>
       <div class="inbox-body">
         <div class="inbox-head">
           <h4>${item.title}</h4>
@@ -1435,6 +1430,13 @@ async function rejectHitl(id) {
   closeModal();
   await refreshDashboard();
   renderAll();
+  if (workroomProjectId && !document.getElementById("sheet-backdrop").hidden) {
+    if (typeof isWorkroomUiInteractive === "function" && isWorkroomUiInteractive()) {
+      if (typeof loadWorkroomData === "function") await loadWorkroomData(workroomProjectId);
+    } else {
+      await syncWorkroomAfterRefresh();
+    }
+  }
 }
 
 async function approveHitl(id) {
@@ -1445,6 +1447,13 @@ async function approveHitl(id) {
   closeModal();
   await refreshDashboard();
   renderAll();
+  if (workroomProjectId && !document.getElementById("sheet-backdrop").hidden) {
+    if (typeof isWorkroomUiInteractive === "function" && isWorkroomUiInteractive()) {
+      if (typeof loadWorkroomData === "function") await loadWorkroomData(workroomProjectId);
+    } else {
+      await syncWorkroomAfterRefresh();
+    }
+  }
   setTimeout(() => {
     openWorkroom(projectId);
     openModal(`
@@ -1585,15 +1594,12 @@ async function openCeoOffice() {
     <div class="thread">${thread}</div>
     <textarea class="brief-input" id="brief-input" placeholder="和 CEO 聊需求、讨论方案，或下达指令…" rows="3"></textarea>
     <div class="ceo-attach-row">
-      <label class="ceo-attach-btn">
+      <label class="icon-btn ceo-attach-icon" title="添加附件">
         <input type="file" id="ceo-files" accept=".md,.pdf,text/markdown,application/pdf" multiple hidden onchange="onCeoFilesSelected()"/>
-        附件
+        ${WR_ICONS.attach}
       </label>
       <span class="ceo-files-hint" id="ceo-files-hint">支持 .md / .pdf，可多选</span>
-    </div>
-    <div class="btn-row">
-      <button class="btn-primary" id="ceo-send-btn" onclick="submitBrief()">发送</button>
-      ${data.weeklyReport?.status === "draft" ? `<button class="btn-secondary" onclick="goToWeekly()">W20 周报草稿</button>` : ""}
+      ${iconBtn("send", "submitBrief()", "发送", "icon-btn-accent", "ceo-send-btn")}
     </div>
   `, "ceo-office");
   requestAnimationFrame(scrollCeoThreadToBottom);
@@ -1614,7 +1620,7 @@ async function submitBrief() {
   const files = fileInput?.files ? [...fileInput.files] : [];
   if (!text && !files.length) return;
   const btn = document.getElementById("ceo-send-btn");
-  if (btn) { btn.disabled = true; btn.textContent = "CEO 回复中…"; }
+  if (btn) { btn.disabled = true; btn.classList.add("is-busy"); }
   const displayText = text || `（附件：${files.map((f) => f.name).join("、")}）`;
   input.value = "";
   if (fileInput) fileInput.value = "";
@@ -1636,13 +1642,12 @@ async function submitBrief() {
     processing = !!(res.meta?.processing || res.meta?.workflowPending);
     updateCeoDispatchStatus({ ...res.meta, workflowPending: processing });
     if (processing) {
-      if (btn) btn.textContent = "CEO 思考中…";
       await pollCeoThreadUntilSettled(true, 180000);
     }
   } catch (e) {
     alert(`发送失败：${e.message}`);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "发送"; }
+    if (btn) { btn.disabled = false; btn.classList.remove("is-busy"); }
     input?.focus();
     try {
       await refreshDashboard();
@@ -1826,24 +1831,6 @@ function renderProjectPnLSection() {
       `).join("")}
     </div>
     <div class="pnl-grid">${rows.map(renderProjectPnLCard).join("") || '<p class="empty-inline">暂无</p>'}</div>`;
-}
-
-function renderWorkroomFinance() {
-  const row = getProjectPnL(workroomProjectId);
-  const el = document.getElementById("workroom-finance");
-  if (!el) return;
-  if (!row?.health) { el.hidden = true; return; }
-  el.hidden = false;
-  el.innerHTML = `
-    <div class="workroom-finance-inner glass-inner">
-      <div class="wf-label">项目盈亏</div>
-      <div class="wf-metrics">
-        ${row.revenue > 0 ? `<span>合同 ${fmtMoney(row.revenue)}</span>` : row.quoted ? `<span>报价 ${fmtMoney(row.quoted)}</span>` : ""}
-        <span>成本 ${fmtMoney(row.cost)}</span>
-        ${row.revenue > 0 ? `<span class="${row.margin >= 0 ? "pos" : "neg"}">毛利 ${fmtMoney(row.margin)}</span>` : `<span class="pnl-watch">已耗 ${fmtMoney(row.cost)}</span>`}
-      </div>
-      <button class="wf-link" onclick="showProjectPnL('${workroomProjectId}')">详情</button>
-    </div>`;
 }
 
 function renderCosts() {
@@ -2475,6 +2462,7 @@ window.saveSettingsRole = saveSettingsRole;
 window.saveRuntimeSettings = saveRuntimeSettings;
 window.testSettingsConnection = testSettingsConnection;
 
+window.showRoleModalStacked = showRoleModalStacked;
 window.showRoleModal = showRoleModal;
 window.showStatsModal = showStatsModal;
 window.showClientDetail = showClientDetail;
@@ -2496,10 +2484,16 @@ window.saveFounderProfile = saveFounderProfile;
 window.toggleRolePromptPreview = toggleRolePromptPreview;
 window.toggleFounderProfilePreview = toggleFounderProfilePreview;
 window.closeModal = closeModal;
+window.markClosureItem = markClosureItem;
 window.exportCurrentMd = exportCurrentMd;
 window.exportCurrentPdf = exportCurrentPdf;
 window.exportProjectZip = exportProjectZip;
 window.exportClientDeliveryZip = exportClientDeliveryZip;
+window.openArtifactEditor = openArtifactEditor;
+window.cancelArtifactEditor = cancelArtifactEditor;
+window.saveArtifactContent = saveArtifactContent;
+window.submitArtifactForReview = submitArtifactForReview;
+window.toggleArtifactDiff = toggleArtifactDiff;
 window.exportWeeklyMd = exportWeeklyMd;
 window.exportWeeklyPdf = exportWeeklyPdf;
 window.sendWeeklyMock = sendWeeklyMock;

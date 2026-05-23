@@ -48,10 +48,22 @@ def inbox_signature(dashboard: dict[str, Any]) -> dict[str, Any]:
 
 def presentation_signature(dashboard: dict[str, Any]) -> dict[str, Any]:
     overview = dashboard.get("overviewLive") or dashboard.get("presentation", {}).get("overview")
+    projects_sig = _hash_payload(
+        [
+            {
+                "id": p.get("id"),
+                "progress": p.get("progress"),
+                "stage": p.get("stage"),
+                "hitl": p.get("hitlPending"),
+            }
+            for p in dashboard.get("projects") or []
+        ]
+    )
     payload = {
         "feedSig": feed_signature(dashboard),
         "overviewLen": len(overview or []),
         "overviewSig": _hash_payload(overview or []),
+        "projectsSig": projects_sig,
     }
     payload["sig"] = _hash_payload(payload)
     return payload

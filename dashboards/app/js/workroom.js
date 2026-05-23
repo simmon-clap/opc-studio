@@ -1,12 +1,12 @@
-/** Workroom v0.3 — grouped nav, typed viewers, versions, HITL */
+/** Workroom v2 — grouped nav, focus bar, action-driven toolbar */
 
 const ART_GROUP_ORDER = ["evaluate", "legal", "engineering", "delivery", "ops"];
 const ART_GROUP_LABELS = {
-  evaluate: "评估 · 立项",
-  legal: "法务 · 合同",
-  engineering: "工程 · 交付",
-  delivery: "验收 · 结项",
-  ops: "运营 · 台账",
+  evaluate: "阶段2 · 评估立项",
+  legal: "阶段3 · 方案签约",
+  engineering: "阶段4 · 开发交付",
+  delivery: "阶段5 · 验收结项",
+  ops: "运营台账",
 };
 const ART_KIND_LABELS = {
   memo: "评估备忘", prd: "PRD", nda: "NDA", contract: "合同", sow: "SOW",
@@ -24,6 +24,372 @@ const ART_STATUS_LABELS = {
 let workroomSelectedFile = null;
 let workroomDiffMode = false;
 let workroomDiffFrom = null;
+let workroomDiffLines = null;
+let workroomDiffTo = null;
+let workroomEditMode = false;
+let workroomEditContent = null;
+let workroomData = null;
+let briefEditOpen = false;
+let openDropdownId = null;
+let suppressDropdownClose = false;
+let workroomViewVersion = null;
+
+function isWorkroomUiInteractive() {
+  if (openDropdownId || suppressDropdownClose) return true;
+  if (briefEditOpen || workroomEditMode) return true;
+  if (document.getElementById("sheet-backdrop")?.hidden) return false;
+  const ae = document.activeElement;
+  if (ae?.closest("#workroom-sheet")) {
+    const tag = ae.tagName;
+    if (tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT") return true;
+  }
+  return false;
+}
+
+function captureWorkroomUiState() {
+  return {
+    dropdownId: openDropdownId || document.querySelector(".wr-dropdown.open")?.id || null,
+    folds: [...document.querySelectorAll("#workroom-nav details[data-fold-key]")]
+      .filter((d) => d.open)
+      .map((d) => d.dataset.foldKey),
+    focusOthers: !!document.querySelector(".focus-others[open]"),
+    viewVersion: workroomViewVersion,
+  };
+}
+
+function restoreWorkroomUiState(ui) {
+  if (!ui) return;
+  (ui.folds || []).forEach((key) => {
+    document.querySelector(`#workroom-nav details[data-fold-key="${CSS.escape(key)}"]`)?.setAttribute("open", "");
+  });
+  if (ui.focusOthers) document.querySelector(".focus-others")?.setAttribute("open", "");
+  if (ui.dropdownId) {
+    openDropdownId = ui.dropdownId;
+    document.getElementById(ui.dropdownId)?.classList.add("open");
+  }
+  if (ui.viewVersion) workroomViewVersion = ui.viewVersion;
+}
+
+function artifactCanInlineEdit(art) {
+  return (art?.actions || []).some((a) => a.id === "edit");
+}
+
+function onArtifactContentClick(e) {
+  if (e.target.closest("a, button, input, textarea, select, .icon-btn, .wr-dropdown")) return;
+  const art = getEnrichedArtifact(workroomArtifactId);
+  if (!artifactCanInlineEdit(art)) return;
+  openArtifactEditor();
+}
+
+function onBriefBodyClick(e) {
+  if (briefEditOpen) return;
+  if (e.target.closest("button, textarea, input, .icon-btn")) return;
+  toggleBriefEditor();
+}
+
+function renderRoleAvatarsNav(roleIds, max = 4) {
+  const ids = [...new Set((roleIds || []).filter(Boolean))];
+  if (!ids.length || typeof assigneeAvatarsInteractive !== "function") return "";
+  return assigneeAvatarsInteractive(ids, max, 22);
+}
+
+function renderPriorityPicker(priority) {
+  const p = priority || "P2";
+  const opts = ["P0", "P1", "P2", "P3"]
+    .map((x) => `<button type="button" onclick="event.stopPropagation();setProjectPriority('${x}')">${x}</button>`)
+    .join("");
+  return `
+    <div class="wr-dropdown" id="priority-dd">
+      <button type="button" class="priority pri-${p} sheet-priority wr-priority-btn" onclick="toggleDropdown('priority-dd', event)" title="调整优先级">
+        <span>${p}</span>${WR_ICONS.chevronDown}
+      </button>
+      <div class="wr-dropdown-menu" onclick="event.stopPropagation()">${opts}</div>
+    </div>`;
+}
+
+async function setProjectPriority(priority) {
+  closeAllDropdowns();
+  if (!workroomProjectId) return;
+  const current = getProject(workroomProjectId)?.priority;
+  if (priority === current) return;
+  try {
+    const res = await apiPatch(`/projects/${workroomProjectId}`, { priority });
+    const updated = res.data?.project;
+    const p = getProject(workroomProjectId);
+    if (p && updated) Object.assign(p, updated);
+    await refreshDashboard();
+    renderProjects();
+    updateBadges();
+    if (getActiveViewId() === "inbox") renderInbox();
+    await renderWorkroomShell(workroomProjectId, workroomArtifactId);
+    if (res.data?.priorityChanged) {
+      showWorkroomToast(`优先级 ${current || "—"} → ${priority} · 已通知 CEO 调整任务排期`);
+    }
+  } catch (e) {
+    const stale = /405|404|Method Not Allowed|Not Found/i.test(String(e.message));
+    const hint = stale ? "\n\n后端可能未重启：终端 Ctrl+C 停旧进程，再运行 ./start.sh" : "";
+    alert(`优先级更新失败：${e.message}${hint}`);
+  }
+}
+
+async function saveBriefFromEditor() {
+  const qsEl = document.getElementById("brief-open-questions");
+  const scopeEl = document.getElementById("brief-scope");
+  if (!qsEl || !workroomProjectId) return;
+  const openQuestions = qsEl.value.split("\n").map((s) => s.trim()).filter(Boolean);
+  const scope = scopeEl?.value?.trim() || undefined;
+  try {
+    await apiPatch(`/projects/${workroomProjectId}/brief`, { openQuestions, scope });
+    briefEditOpen = false;
+    await refreshDashboard();
+    await renderWorkroomShell(workroomProjectId, workroomArtifactId);
+  } catch (e) {
+    alert(`Brief 保存失败：${e.message}`);
+  }
+}
+
+function toggleBriefEditor() {
+  briefEditOpen = !briefEditOpen;
+  document.getElementById("workroom-nav").innerHTML = renderWorkroomNavGrouped(
+    workroomProjectId,
+    workroomArtifactId,
+    workroomData
+  );
+}
+
+const STATUS_DOT = { waiting: "⏳", done: "●", revision: "↻", active: "○", placeholder: "—" };
+const FOCUS_TYPE_LABEL = {
+  hitl: "待批", fill: "待填", running: "执行中", pending: "队列",
+  question: "待确认", commitment: "承诺", process: "流程",
+};
+
+function closeAllDropdowns() {
+  openDropdownId = null;
+  document.querySelectorAll(".wr-dropdown.open").forEach((el) => el.classList.remove("open"));
+}
+
+function toggleDropdown(id, ev) {
+  if (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+  const el = document.getElementById(id);
+  if (!el) return;
+  const willOpen = openDropdownId !== id;
+  closeAllDropdowns();
+  if (willOpen) {
+    openDropdownId = id;
+    suppressDropdownClose = true;
+    el.classList.add("open");
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => { suppressDropdownClose = false; });
+    });
+  }
+}
+
+document.addEventListener("mousedown", (e) => {
+  if (e.target.closest(".wr-dropdown")) {
+    suppressDropdownClose = true;
+    setTimeout(() => { suppressDropdownClose = false; }, 120);
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (suppressDropdownClose || e.target.closest(".wr-dropdown")) return;
+  closeAllDropdowns();
+});
+
+function showWorkroomToast(msg) {
+  let el = document.getElementById("workroom-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "workroom-toast";
+    el.className = "workroom-toast";
+    document.getElementById("workroom-sheet")?.appendChild(el);
+  }
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.hidden = true; }, 2800);
+}
+
+async function loadWorkroomData(projectId) {
+  try {
+    const res = await apiGet(`/projects/${projectId}/workroom`);
+    workroomData = res.data;
+  } catch (e) {
+    workroomData = null;
+    if (/405|404|Method Not Allowed|Not Found/i.test(String(e.message))) {
+      showWorkroomToast("工作室 API 不可用 · 请重启后端 ./start.sh");
+    }
+  }
+  return workroomData;
+}
+
+function renderWorkroomHeader(header) {
+  const stageEl = document.getElementById("sheet-stage-line");
+  if (!stageEl || !header) return;
+  const pd = header.progressDetail || {};
+  const hitl = header.hitlPending
+    ? `<span class="sheet-hitl-dot">${escapeHtml(header.hitlPending)} 待批</span>`
+    : "";
+  const exec = pd.executionProgress != null
+    ? `<span class="sheet-exec">执行 ${pd.executionProgress}%</span>`
+    : "";
+  stageEl.innerHTML = `
+    ${renderPriorityPicker(header.priority)}
+    <span class="sheet-stage">${escapeHtml(header.stageShort || header.stage || "")}</span>
+    <span class="sheet-pct" title="阶段进度">${header.progress || 0}%</span>
+    ${exec}
+    ${hitl}`;
+  renderWorkroomProjectBar(header);
+  renderProjectExportMenu(header.exportMenu || workroomData?.exportMenu || []);
+}
+
+function renderWorkroomProjectBar(header) {
+  const bar = document.getElementById("sheet-project-bar");
+  if (!bar) return;
+  const tags = [
+    header.hitlPending ? `<span class="project-tag tag-hitl">${escapeHtml(header.hitlPending)} 待批</span>` : "",
+    header.closureTag ? `<span class="project-tag tag-closure">${escapeHtml(header.closureTag)}</span>` : "",
+    header.pnlHealth ? `<span class="project-tag tag-pnl-${header.pnlHealth}">${header.pnlHealth === "healthy" ? "盈利" : header.pnlHealth === "watch" ? "需关注" : "线索"}</span>` : "",
+  ].filter(Boolean);
+  const assignees = assigneeAvatarsInteractive(header.assignees || [], 5, 24);
+  const execNote = header.progressDetail?.executionNote;
+  bar.hidden = !(header.summary || tags.length || assignees || execNote);
+  bar.innerHTML = `
+    <div class="sheet-project-main">
+      ${header.summary ? `<details class="sheet-summary"><summary>${escapeHtml(header.summary.slice(0, 48))}${header.summary.length > 48 ? "…" : ""}</summary><p>${escapeHtml(header.summary)}</p>${header.agentDeliverable ? `<p class="sheet-deliverable">${escapeHtml(header.agentDeliverable)}</p>` : ""}</details>` : ""}
+      ${execNote ? `<div class="sheet-exec-note">${escapeHtml(execNote)}</div>` : ""}
+    </div>
+    <div class="sheet-project-side">
+      <div class="sheet-project-tags">${tags.join("") || ""}</div>
+      <div class="sheet-project-roles">${assignees}</div>
+    </div>`;
+}
+
+function renderProjectExportMenu(menu) {
+  const wrap = document.getElementById("project-export-wrap");
+  if (!wrap) return;
+  if (!menu.length) { wrap.innerHTML = ""; return; }
+  const items = menu.map((m) =>
+    `<button type="button" onclick="projectExport('${m.id}')">${escapeHtml(m.label)}</button>`
+  ).join("");
+  wrap.innerHTML = iconDropdown("project-export-dd", "download", "导出项目", items);
+}
+
+async function projectExport(kind) {
+  closeAllDropdowns();
+  if (kind === "client") await exportClientDeliveryZip();
+  else await exportProjectZip();
+}
+
+function renderWorkroomFocus(data) {
+  const el = document.getElementById("workroom-focus");
+  if (!el) return;
+  const focus = data?.focus;
+  const others = data?.others || [];
+  if (!focus && !others.length) { el.hidden = true; return; }
+  el.hidden = false;
+  const renderStep = (s, highlight) => {
+    const click = s.artifactId
+      ? `onclick="selectArtifact('${s.artifactId}')"`
+      : s.hitlId && s.artifactId
+        ? `onclick="selectArtifact('${s.artifactId}')"`
+        : "";
+    const tag = FOCUS_TYPE_LABEL[s.type] || s.type || "提示";
+    return `
+      <button type="button" class="focus-step ${highlight ? "focus-primary" : "focus-secondary"}" ${click}>
+        <span class="focus-tag">${tag}</span>
+        <span class="focus-msg">${escapeHtml(s.message || "")}</span>
+      </button>`;
+  };
+  el.innerHTML = `
+    ${focus ? renderStep(focus, true) : ""}
+    ${others.length ? `
+      <details class="focus-others">
+        <summary>还有 ${others.length} 项</summary>
+        <div class="focus-others-list">${others.map((s) => renderStep(s, false)).join("")}</div>
+      </details>` : ""}`;
+}
+
+function renderNavFold(fold) {
+  const foldRoles = renderRoleAvatarsNav(fold.roles);
+  const foldKey = `${fold.type}-${(fold.label || "").replace(/"/g, "")}`;
+  if (fold.type === "brief") {
+    const brief = fold.brief || {};
+    const qs = (fold.openQuestions || []).map((q) => `<li>${escapeHtml(q)}</li>`).join("");
+    const facts = (brief.confirmedFacts || []).map((f) => `<li>${escapeHtml(f)}</li>`).join("");
+    const viewBody = `
+      ${brief.scope ? `<p class="brief-scope-line">${escapeHtml(brief.scope)}</p>` : ""}
+      ${facts ? `<ul class="brief-facts-compact">${facts}</ul>` : ""}
+      ${qs ? `<ul class="brief-questions-compact">${qs}</ul>` : ""}
+      ${!(brief.scope || facts || qs) ? `<p class="brief-empty-hint">点击编辑 Brief</p>` : ""}`;
+    const editor = `
+      <div class="founder-doc-shell glass-inner brief-doc-shell">
+        <label class="brief-editor-label">待确认（每行一项）</label>
+        <textarea id="brief-open-questions" class="founder-doc-editor brief-doc-editor" rows="4">${(fold.openQuestions || []).map(escapeHtml).join("\n")}</textarea>
+        <label class="brief-editor-label">范围</label>
+        <input id="brief-scope" class="brief-editor-input" value="${escapeHtml(brief.scope || "")}" placeholder="项目范围"/>
+      </div>`;
+    return `
+      <details class="nav-fold nav-fold-brief" open data-fold-key="${escapeAttr(foldKey)}">
+        <summary class="nav-fold-summary">
+          <span class="nav-fold-dot">⏳</span>
+          <span class="nav-fold-label">${escapeHtml(fold.label)}</span>
+          ${foldRoles}
+          ${briefEditOpen ? microBtn("check", "saveBriefFromEditor()", "保存 Brief", "micro-accent") : ""}
+          ${briefEditOpen ? microBtn("x", "toggleBriefEditor()", "取消") : ""}
+        </summary>
+        <div class="nav-fold-body ${briefEditOpen ? "" : "brief-clickable"}" ${briefEditOpen ? "" : 'onclick="onBriefBodyClick(event)"'}>${briefEditOpen ? editor : viewBody}</div>
+      </details>`;
+  }
+  if (fold.type === "deliberation") {
+    const d = fold.data || {};
+    const turns = (d.turns || []).map((t) => `
+      <div class="delib-turn compact">
+        <span class="delib-author">${ROLE_SHORT?.[t.author] || t.author}</span>
+        <p>${escapeHtml(t.content || "")}</p>
+      </div>`).join("");
+    return `
+      <details class="nav-fold" data-fold-key="${escapeAttr(foldKey)}">
+        <summary class="nav-fold-summary">
+          <span class="nav-fold-dot">●</span>
+          <span class="nav-fold-label">${escapeHtml(fold.label)}</span>
+          ${foldRoles}
+        </summary>
+        <div class="nav-fold-body">
+          <div class="delib-agenda compact">${(d.agenda || []).map((a) => `<span class="chip">${escapeHtml(a)}</span>`).join("")}</div>
+          <div class="delib-turns">${turns}</div>
+        </div>
+      </details>`;
+  }
+  if (fold.type === "closure") {
+    const cl = fold.data || {};
+    const items = (cl.checklist || []).map((item) => {
+      const avatars = renderRoleAvatarsNav([item.roleId], 1);
+      return `
+        <div class="closure-item compact ${item.done ? "done" : ""}">
+          <span class="closure-check">${item.done ? "☑" : "☐"}</span>
+          <span class="closure-label">${escapeHtml(item.label || "")}</span>
+          ${avatars}
+        </div>`;
+    }).join("");
+    return `
+      <details class="nav-fold" data-fold-key="${escapeAttr(foldKey)}">
+        <summary class="nav-fold-summary">
+          <span class="nav-fold-dot">${cl.status === "closed" ? "●" : "⏳"}</span>
+          <span class="nav-fold-label">${escapeHtml(fold.label)}</span>
+          ${foldRoles}
+        </summary>
+        <div class="nav-fold-body">
+          ${cl.status === "in_closure" ? iconBtn("download", "exportClientDeliveryZip()", "导出客户 ZIP", "icon-btn-sm") : ""}
+          <div class="closure-list compact">${items}</div>
+        </div>
+      </details>`;
+  }
+  return "";
+}
 
 function artifactKind(art) {
   return art.kind || art.type || "doc";
@@ -43,10 +409,10 @@ function artifactViewer(art) {
 
 function artifactGroup(art) {
   return art.group || ({
-    memo: "evaluate", prd: "evaluate",
+    memo: "evaluate", prd: "legal",
     nda: "legal", contract: "legal", sow: "legal", quote: "legal",
     tech_spec: "engineering", code: "engineering", demo: "engineering", design: "engineering",
-    acceptance: "delivery", closure: "delivery", email: "delivery",
+    acceptance: "delivery", closure: "delivery", email: "engineering",
     ops_record: "ops", doc: "ops",
   }[artifactKind(art)] || "ops");
 }
@@ -96,16 +462,184 @@ function escapeHtml(s) {
   return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function renderArtifactHitlBar(art) {
-  if (art.status !== "review" || !art.hitlId) return "";
+function escapeAttr(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function renderArtifactActionBar(art) {
+  if (workroomDiffMode || workroomEditMode) return "";
+  const actions = (art.actions || []).filter((a) => a.id !== "edit");
+  const pending = art.pendingFields || art.quality?.pendingFields || 0;
+  if (!actions.length && !pending) return "";
   return `
-    <div class="art-hitl-bar">
-      <span>📋 待你审批定稿</span>
-      <div class="art-hitl-actions">
-        <button class="btn-primary btn-sm" onclick="approveArtifact('${art.id}')">批准定稿</button>
-        <button class="btn-secondary btn-sm" onclick="rejectArtifactHitl('${art.id}','${art.hitlId}')">驳回</button>
+    <div class="art-action-bar">
+      ${pending ? `<span class="art-action-hint">${pending} 处待填写</span>` : ""}
+      <div class="art-action-buttons">
+        ${actions.map((a) => {
+          const icon = ACTION_ICON[a.id] || "more";
+          const title = ACTION_TITLE[a.id] || a.label;
+          const accent = a.primary ? " icon-btn-accent" : "";
+          return iconBtn(icon, `handleArtifactAction('${a.id}','${art.id}','${art.hitlId || ""}')`, title, accent);
+        }).join("")}
       </div>
     </div>`;
+}
+
+function handleArtifactAction(actionId, artifactId, hitlId) {
+  if (actionId === "edit") openArtifactEditor();
+  else if (actionId === "submit_review") submitArtifactForReview();
+  else if (actionId === "approve") approveArtifact(artifactId);
+  else if (actionId === "reject") rejectArtifactHitl(artifactId, hitlId);
+}
+
+function renderArtifactExportMenu(art) {
+  const formats = art.exportFormats || [{ id: "md", label: "Markdown" }, { id: "pdf", label: "PDF" }];
+  const items = formats.map((f) =>
+    `<button type="button" onclick="artifactExport('${f.id}')">${escapeHtml(f.label)}</button>`
+  ).join("");
+  return iconDropdown("art-export-dd", "download", "导出交付", items);
+}
+
+async function artifactExport(format) {
+  closeAllDropdowns();
+  const art = getArtifact(workroomArtifactId);
+  if (!art) return;
+  if (format === "md") exportCurrentMd();
+  else if (format === "pdf") exportCurrentPdf();
+  else if (format === "zip") await exportArtifactZip(art);
+  else if (format === "link") {
+    const url = art.demoUrl || (art.content || "").match(/https?:\/\/[^\s`)]+/)?.[0];
+    if (url) {
+      try { await navigator.clipboard.writeText(url); alert("链接已复制"); }
+      catch (_) { prompt("复制链接", url); }
+    }
+  }
+}
+
+async function exportArtifactZip(art) {
+  if (!window.JSZip || !(art.files || []).length) return;
+  const zip = new JSZip();
+  (art.files || []).forEach((f) => zip.file(f.path, f.content || ""));
+  if (art.content) zip.file(`${slugify(art.title || "doc")}.md`, art.content);
+  const blob = await zip.generateAsync({ type: "blob" });
+  const p = getProject(workroomProjectId);
+  downloadBlob(blob, `${slugify(p?.clientName)}_${slugify(art.title)}.zip`, "application/zip");
+}
+
+function openArtifactEditor() {
+  const art = getArtifact(workroomArtifactId);
+  if (!art) return;
+  workroomEditMode = true;
+  workroomDiffMode = false;
+  workroomDiffLines = null;
+  workroomEditContent = art._viewContent || art.content || "";
+  renderWorkroomArtifactContent();
+}
+
+function cancelArtifactEditor() {
+  workroomEditMode = false;
+  workroomEditContent = null;
+  renderWorkroomArtifactContent();
+}
+
+async function saveArtifactContent() {
+  const textarea = document.getElementById("art-editor-content");
+  if (!textarea) return;
+  const content = textarea.value;
+  try {
+    await apiPut(`/projects/${workroomProjectId}/artifacts/${workroomArtifactId}/content`, {
+      content,
+      note: "Founder 填写",
+    });
+    workroomEditMode = false;
+    workroomEditContent = null;
+    await refreshDashboard();
+    renderWorkroomArtifactContent();
+  } catch (e) {
+    alert(`保存失败：${e.message}`);
+  }
+}
+
+async function submitArtifactForReview() {
+  try {
+    await apiPost(`/projects/${workroomProjectId}/artifacts/${workroomArtifactId}/submit-review`, {});
+    await refreshDashboard();
+    renderWorkroomShell(workroomProjectId, workroomArtifactId);
+  } catch (e) {
+    alert(`提交失败：${e.message}`);
+  }
+}
+
+function renderArtifactEditorShell(art) {
+  const content = workroomEditContent ?? art._viewContent ?? art.content ?? "";
+  return `
+    <div class="founder-doc-shell glass-inner art-doc-shell">
+      <textarea class="founder-doc-editor art-doc-editor" id="art-editor-content" spellcheck="false">${escapeHtml(content)}</textarea>
+    </div>`;
+}
+
+function renderWorkroomArtHead(art, opts = {}) {
+  const { editing = false } = opts;
+  const kindLabel = ART_KIND_LABELS[artifactKind(art)] || artifactKind(art);
+  const headActions = editing
+    ? `<div class="art-head-actions">${microBtn("x", "cancelArtifactEditor()", "取消")}${microBtn("check", "saveArtifactContent()", "保存", "micro-accent")}</div>`
+    : renderArtifactExportMenu(art);
+  return `
+    <div class="workroom-art-head">
+      <div class="workroom-art-title">
+        <h2>${escapeHtml(art.title || "未命名交付")}</h2>
+        <div class="workroom-art-sub">
+          <span class="art-version">v${art.version || "0.1"}</span>
+          <span class="art-kind-badge">${kindLabel}</span>
+          ${art.format ? `<span class="art-format-badge">${art.format}</span>` : ""}
+        </div>
+      </div>
+      ${headActions}
+    </div>`;
+}
+
+async function reloadArtifactDiff() {
+  const art = getArtifact(workroomArtifactId);
+  if (!art || !workroomDiffMode) return;
+  const versions = art.versions || [];
+  if (versions.length < 2) {
+    workroomDiffMode = false;
+    workroomDiffLines = null;
+    return;
+  }
+  const fromV = workroomDiffFrom || versions[Math.max(0, versions.length - 2)].version;
+  const toV = workroomDiffTo || art.version;
+  try {
+    const json = await apiGet(
+      `/projects/${workroomProjectId}/artifacts/${workroomArtifactId}/diff?from=${encodeURIComponent(fromV)}&to=${encodeURIComponent(toV)}`
+    );
+    workroomDiffLines = json.data.lines || [];
+  } catch (_) {
+    workroomDiffLines = null;
+    workroomDiffMode = false;
+  }
+}
+
+async function syncWorkroomAfterRefresh() {
+  if (!workroomProjectId || document.getElementById("sheet-backdrop")?.hidden) return;
+  await loadWorkroomData(workroomProjectId);
+  if (isWorkroomUiInteractive()) return;
+  const ui = captureWorkroomUiState();
+  if (workroomData?.header) renderWorkroomHeader(workroomData.header);
+  document.getElementById("workroom-nav").innerHTML = renderWorkroomNavGrouped(
+    workroomProjectId,
+    workroomArtifactId,
+    workroomData
+  );
+  renderWorkroomFocus(workroomData);
+  if (workroomDiffMode) await reloadArtifactDiff();
+  renderWorkroomArtifactContent();
+  restoreWorkroomUiState(ui);
+}
+
+function renderArtifactHitlBar(art) {
+  if (art.status !== "review" || !art.hitlId) return "";
+  return `<div class="art-hitl-bar"><span>📋 待你审批定稿</span></div>`;
 }
 
 async function approveArtifact(artifactId) {
@@ -131,19 +665,34 @@ async function rejectArtifactHitl(artifactId, hitlId) {
 
 function renderVersionBar(art) {
   const versions = art.versions || [{ version: art.version || "0.1", note: "当前" }];
-  const opts = versions.map((v) =>
-    `<option value="${v.version}">v${v.version} · ${v.note || ""}</option>`
+  const activeVer = workroomViewVersion || workroomDiffFrom || art.version || versions[versions.length - 1]?.version;
+  const current = versions.find((v) => v.version === activeVer) || versions[versions.length - 1];
+  const items = versions.map((v) =>
+    `<button type="button" onclick="event.stopPropagation();pickArtifactVersion('${escapeAttr(v.version)}')">v${escapeHtml(v.version)} · ${escapeHtml(v.note || "")}</button>`
   ).join("");
+  const diffTitle = workroomDiffMode ? "关闭对比" : "版本对比";
   return `
     <div class="art-version-bar">
-      <label>版本 <select id="art-version-select" onchange="onArtifactVersionChange(this.value)">${opts}</select></label>
-      <button class="btn-secondary btn-sm" onclick="toggleArtifactDiff()">${workroomDiffMode ? "关闭对比" : "版本对比"}</button>
+      <div class="wr-dropdown" id="art-version-dd">
+        <button type="button" class="version-pill" onclick="toggleDropdown('art-version-dd', event)" title="切换版本">
+          <span>v${escapeHtml(current.version)} · ${escapeHtml(current.note || "")}</span>${WR_ICONS.chevronDown}
+        </button>
+        <div class="wr-dropdown-menu" onclick="event.stopPropagation()">${items}</div>
+      </div>
+      ${iconBtn("diff", "toggleArtifactDiff()", diffTitle, `icon-btn-sm${workroomDiffMode ? " icon-btn-active" : ""}`)}
     </div>`;
 }
 
-function onArtifactVersionChange(version) {
+function pickArtifactVersion(version) {
+  closeAllDropdowns();
+  workroomViewVersion = version;
   workroomDiffFrom = version;
   if (!workroomDiffMode) loadArtifactVersionContent(version);
+  else reloadArtifactDiff().then(() => renderWorkroomArtifactContent());
+}
+
+function onArtifactVersionChange(version) {
+  pickArtifactVersion(version);
 }
 
 async function loadArtifactVersionContent(version) {
@@ -160,11 +709,15 @@ async function loadArtifactVersionContent(version) {
 }
 
 async function toggleArtifactDiff() {
+  workroomEditMode = false;
+  workroomEditContent = null;
   workroomDiffMode = !workroomDiffMode;
   if (!workroomDiffMode) {
+    workroomDiffLines = null;
+    workroomDiffFrom = null;
+    workroomDiffTo = null;
     const art = getArtifact(workroomArtifactId);
     if (art) delete art._viewContent;
-    delete art._diffLines;
     renderWorkroomArtifactContent();
     return;
   }
@@ -175,18 +728,10 @@ async function toggleArtifactDiff() {
     workroomDiffMode = false;
     return;
   }
-  const fromV = workroomDiffFrom || versions[Math.max(0, versions.length - 2)].version;
-  const toV = art.version;
-  try {
-    const json = await apiGet(
-      `/projects/${workroomProjectId}/artifacts/${workroomArtifactId}/diff?from=${encodeURIComponent(fromV)}&to=${encodeURIComponent(toV)}`
-    );
-    art._diffLines = json.data.lines || [];
-    renderWorkroomArtifactContent();
-  } catch (e) {
-    alert(`对比失败：${e.message}`);
-    workroomDiffMode = false;
-  }
+  workroomDiffFrom = workroomDiffFrom || versions[Math.max(0, versions.length - 2)].version;
+  workroomDiffTo = art.version;
+  await reloadArtifactDiff();
+  renderWorkroomArtifactContent();
 }
 
 function renderDiffViewer(lines) {
@@ -200,28 +745,60 @@ function renderDiffViewer(lines) {
   return `<div class="viewer-diff">${html || "<p>无差异</p>"}</div>`;
 }
 
-function renderWorkroomNavGrouped(projectId, activeId) {
+function renderNavGroupInner(g, activeId) {
+  return `
+    <div class="art-nav-group ${g.isCurrent ? "art-nav-group-current" : ""}">
+      <div class="art-nav-group-head">
+        <div class="art-nav-group-title">${escapeHtml(g.label || g.id)}${g.isCurrent ? '<span class="nav-current-badge">当前</span>' : ""}</div>
+      </div>
+      ${(g.fold || []).map(renderNavFold).join("")}
+      ${(g.artifacts || []).map((a) => renderNavArtifactItem(a, activeId)).join("")}
+    </div>`;
+}
+
+function renderWorkroomNavGrouped(projectId, activeId, payload) {
+  const groups = payload?.groups;
+  if (groups?.length) {
+    const current = groups.filter((g) => g.isCurrent);
+    const history = groups.filter(
+      (g) => g.isHistory && ((g.artifacts || []).length || (g.fold || []).length)
+    );
+    const currentHtml = current.map((g) => renderNavGroupInner(g, activeId)).join("");
+    const historyHtml = history.length
+      ? `<details class="nav-stage-history" data-fold-key="stage-history">
+          <summary>历史阶段 · ${history.length} 组</summary>
+          <div class="nav-stage-history-body">${history.map((g) => renderNavGroupInner(g, activeId)).join("")}</div>
+        </details>`
+      : "";
+    return currentHtml + historyHtml;
+  }
   const arts = sortRoleTasksByRecency(data.artifacts.filter((a) => a.projectId === projectId));
   const byGroup = {};
   arts.forEach((a) => { (byGroup[artifactGroup(a)] = byGroup[artifactGroup(a)] || []).push(a); });
-  if (!arts.length) return '<p style="font-size:0.78rem;color:var(--text3);padding:0.5rem">暂无产出</p>';
+  if (!arts.length) return '<p class="nav-empty">暂无产出</p>';
   return ART_GROUP_ORDER.filter((g) => byGroup[g]?.length).map((g) => `
     <div class="art-nav-group">
       <div class="art-nav-group-title">${ART_GROUP_LABELS[g] || g}</div>
-      ${byGroup[g].map((a) => {
-        const role = getRole(a.roleId);
-        const kind = ART_KIND_LABELS[artifactKind(a)] || artifactKind(a);
-        const st = a.status === "approved" ? " ✓" : a.status === "review" ? " ⏳" : a.status === "revision" ? " ↻" : "";
-        return `
-        <button class="art-item ${a.id === activeId ? "active" : ""}" onclick="selectArtifact('${a.id}')">
-          <span class="art-ico">${ART_ICONS[a.icon] || ART_ICONS.doc}</span>
-          <span>
-            <div class="art-item-title">${a.title}${st}</div>
-            <div class="art-meta">${kind} · ${role?.name || ""} · v${a.version || "0.1"}</div>
-          </span>
-        </button>`;
-      }).join("")}
+      ${byGroup[g].map((a) => renderNavArtifactItem(a, activeId)).join("")}
     </div>`).join("");
+}
+
+function renderNavArtifactItem(a, activeId) {
+  const role = getRole(a.roleId);
+  const kind = ART_KIND_LABELS[artifactKind(a)] || artifactKind(a);
+  const dot = STATUS_DOT[a.statusDot] || STATUS_DOT.active;
+  const avatar = renderRoleAvatarsNav([a.roleId], 1);
+  return `
+    <div class="art-item ${a.id === activeId ? "active" : ""}" role="button" tabindex="0" data-artifact-id="${a.id}"
+      onclick="selectArtifact('${a.id}')"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectArtifact('${a.id}')}">
+      <span class="art-status-dot" title="${a.status || "draft"}">${dot}</span>
+      <span class="art-item-body">
+        <div class="art-item-title">${escapeHtml(a.title || "")}</div>
+        <div class="art-meta">${kind} · v${a.version || "0.1"}${role ? ` · ${role.name}` : ""}</div>
+      </span>
+      ${avatar}
+    </div>`;
 }
 
 function renderContractViewer(art) {
@@ -333,94 +910,68 @@ function renderArtifactBody(art) {
   }
 }
 
+function getEnrichedArtifact(id) {
+  const base = getArtifact(id);
+  if (!base || !workroomData?.groups) return base;
+  for (const g of workroomData.groups) {
+    const found = (g.artifacts || []).find((a) => a.id === id);
+    if (found) return { ...base, ...found };
+  }
+  return base;
+}
+
 function renderWorkroomArtifactContent() {
-  const art = getArtifact(workroomArtifactId);
+  const art = getEnrichedArtifact(workroomArtifactId);
   const el = document.getElementById("workroom-content");
   if (!el) return;
-  if (!art) { el.innerHTML = "<p style='color:var(--text3)'>选择左侧文档</p>"; return; }
+  if (!art) { el.innerHTML = "<p class='nav-empty'>选择左侧交付</p>"; return; }
 
-  if (workroomDiffMode && art._diffLines) {
-    el.innerHTML = `${renderArtifactQualityBar(art)}${renderVersionBar(art)}${renderDiffViewer(art._diffLines)}`;
+  if (workroomEditMode) {
+    el.innerHTML = `
+      ${renderWorkroomArtHead(art, { editing: true })}
+      ${renderArtifactQualityBar(art)}
+      ${(art.versions || []).length ? renderVersionBar(art) : ""}
+      ${renderArtifactEditorShell(art)}`;
+    requestAnimationFrame(() => {
+      const ta = document.getElementById("art-editor-content");
+      ta?.focus();
+      if (ta) ta.setSelectionRange(ta.value.length, ta.value.length);
+    });
+    return;
+  }
+
+  if (workroomDiffMode && workroomDiffLines) {
+    el.innerHTML = `
+      ${renderWorkroomArtHead(art)}
+      ${renderArtifactQualityBar(art)}
+      ${renderVersionBar(art)}
+      ${renderDiffViewer(workroomDiffLines)}`;
     return;
   }
 
   const displayArt = { ...art, content: art._viewContent || art.content };
-  const kindLabel = ART_KIND_LABELS[artifactKind(art)] || artifactKind(art);
   el.innerHTML = `
-    <div class="workroom-toolbar">
-      <div class="workroom-meta">
-        <span class="art-version">v${art.version || "0.1"}</span>
-        <span class="art-kind-badge">${kindLabel}</span>
-        ${art.format ? `<span class="art-format-badge">${art.format}</span>` : ""}
-      </div>
-      <div style="display:flex;gap:0.35rem">
-        <button class="export-btn" style="width:auto;padding:0 0.65rem;font-size:0.72rem" onclick="exportCurrentMd()">MD</button>
-        <button class="export-btn" style="width:auto;padding:0 0.65rem;font-size:0.72rem" onclick="exportCurrentPdf()">PDF</button>
-      </div>
-    </div>
+    ${renderWorkroomArtHead(art)}
     ${renderArtifactHitlBar(art)}
+    ${renderArtifactActionBar(art)}
     ${renderArtifactQualityBar(art)}
     ${(art.versions || []).length ? renderVersionBar(art) : ""}
-    ${renderArtifactBody(displayArt)}`;
+    ${wrapArtifactBody(renderArtifactBody(displayArt), art)}`;
 }
 
-function renderWorkroomBriefPanel(projectId) {
-  const panel = document.getElementById("workroom-brief-panel");
-  if (!panel || !projectId) return;
-  const brief = (data?.projectBriefs || {})[projectId];
-  if (!brief || (!brief.confirmedFacts?.length && !brief.openQuestions?.length && !brief.scope && !brief.cooperationMode)) {
-    panel.hidden = true;
-    return;
-  }
-  panel.hidden = false;
-  const facts = (brief.confirmedFacts || []).map((f) => `<li>${escapeHtml(f)}</li>`).join("");
-  const questions = (brief.openQuestions || []).map((q) => `<li class="brief-question">${escapeHtml(q)}</li>`).join("");
-  panel.innerHTML = `
-    <div class="workroom-panel-head">
-      <div class="workroom-panel-title">项目 Brief</div>
-      ${brief.updatedAt ? `<div class="workroom-panel-sub">更新 ${brief.updatedAt}</div>` : ""}
-    </div>
-    ${brief.cooperationMode || brief.ndaType || brief.scope ? `
-    <div class="brief-meta-row">
-      ${brief.cooperationMode ? `<span class="chip">${escapeHtml(brief.cooperationMode)}</span>` : ""}
-      ${brief.ndaType ? `<span class="chip">${escapeHtml(brief.ndaType)}</span>` : ""}
-      ${brief.scope ? `<span class="brief-scope">${escapeHtml(brief.scope)}</span>` : ""}
-    </div>` : ""}
-    ${facts ? `<ul class="brief-facts">${facts}</ul>` : ""}
-    ${questions ? `<div class="brief-questions"><span class="brief-q-label">待确认</span><ul>${questions}</ul></div>` : ""}`;
+function wrapArtifactBody(html, art) {
+  if (!artifactCanInlineEdit(art)) return html;
+  return `<div class="art-viewer-editable" onclick="onArtifactContentClick(event)" title="点击编辑">${html}</div>`;
 }
 
-function renderWorkroomNextSteps(projectId) {
-  const panel = document.getElementById("workroom-next-panel");
-  if (!panel || !projectId) return;
-  apiGet(`/projects/${projectId}/next-steps`)
-    .then((res) => {
-      const steps = res.data || [];
-      if (!steps.length) {
-        panel.hidden = true;
-        return;
-      }
-      panel.hidden = false;
-      const priorityLabel = { high: "高", medium: "中", low: "低" };
-      panel.innerHTML = `
-        <div class="workroom-panel-head">
-          <div class="workroom-panel-title">下一步</div>
-          <div class="workroom-panel-sub">流程 cue · ${steps.length} 项</div>
-        </div>
-        <div class="next-steps-list">
-          ${steps.map((s) => {
-            const click = s.artifactId
-              ? `onclick="selectArtifact('${s.artifactId}')"`
-              : s.commitmentId
-                ? ""
-                : "";
-            return `
-            <button type="button" class="next-step-item priority-${s.priority || "medium"}" ${click}>
-              <span class="next-step-priority">${priorityLabel[s.priority] || "中"}</span>
-              <span class="next-step-msg">${escapeHtml(s.message)}</span>
-            </button>`;
-          }).join("")}
-        </div>`;
-    })
-    .catch(() => { panel.hidden = true; });
-}
+window.setProjectPriority = setProjectPriority;
+window.saveBriefFromEditor = saveBriefFromEditor;
+window.toggleBriefEditor = toggleBriefEditor;
+window.toggleDropdown = toggleDropdown;
+window.projectExport = projectExport;
+window.artifactExport = artifactExport;
+window.handleArtifactAction = handleArtifactAction;
+window.onArtifactContentClick = onArtifactContentClick;
+window.onBriefBodyClick = onBriefBodyClick;
+window.isWorkroomUiInteractive = isWorkroomUiInteractive;
+window.pickArtifactVersion = pickArtifactVersion;

@@ -7,3 +7,5 @@ def test_health(client):
     body = response.json()
     assert body["ok"] is True
     assert body["version"] == APP_VERSION
+    assert body["capabilities"]["workroom"] is True
+    assert body["capabilities"]["projectPatch"] is True

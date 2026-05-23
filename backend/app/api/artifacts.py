@@ -17,6 +17,7 @@ from app.services.artifact_versions import (
 )
 from app.services.artifact_workflow import approve_artifact, maybe_submit_artifact_review
 from app.services.dashboard_store import get_dashboard
+from app.presentation.artifact_actions import artifact_actions, artifact_export_formats
 from app.services.project_store import (
     get_artifact_meta,
     read_artifact_file,
@@ -44,7 +45,10 @@ def get_artifact_meta_route(
     if art is None:
         raise fail("ARTIFACT_NOT_FOUND", "产出物不存在", status=404)
     ensure_versions_meta(art, project_id)
-    return ok({k: v for k, v in art.items() if k != "content"})
+    row = {k: v for k, v in art.items() if k != "content"}
+    row["actions"] = artifact_actions(art)
+    row["exportFormats"] = artifact_export_formats(art)
+    return ok(row)
 
 
 @router.get("/projects/{project_id}/artifacts/{artifact_id}/content")

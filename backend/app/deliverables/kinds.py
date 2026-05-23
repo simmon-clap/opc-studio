@@ -32,7 +32,7 @@ KIND_REGISTRY: dict[str, dict[str, str]] = {
         "title": "PRD 草稿",
         "icon": "doc",
         "viewer": "prd",
-        "group": "evaluate",
+        "group": "legal",
     },
     "nda": {
         "format": "markdown",
@@ -112,7 +112,7 @@ KIND_REGISTRY: dict[str, dict[str, str]] = {
         "title": "客户邮件草稿",
         "icon": "mail",
         "viewer": "email",
-        "group": "delivery",
+        "group": "engineering",
     },
     "ops_record": {
         "format": "markdown",
@@ -141,11 +141,11 @@ KIND_REGISTRY: dict[str, dict[str, str]] = {
 }
 
 GROUP_LABELS = {
-    "evaluate": "评估 · 立项",
-    "legal": "法务 · 合同",
-    "engineering": "工程 · 交付",
-    "delivery": "验收 · 结项",
-    "ops": "运营 · 台账",
+    "evaluate": "阶段2 · 评估立项",
+    "legal": "阶段3 · 方案签约",
+    "engineering": "阶段4 · 开发交付",
+    "delivery": "阶段5 · 验收结项",
+    "ops": "运营台账",
 }
 
 # Legacy artifact.type → kind

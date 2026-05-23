@@ -29,6 +29,71 @@ class ClosureCheckBody(BaseModel):
     done: bool = True
 
 
+class ProjectPatchBody(BaseModel):
+    priority: str | None = None
+    summary: str | None = None
+    assignees: list[str] | None = None
+
+
+class BriefPatchBody(BaseModel):
+    openQuestions: list[str] | None = None
+    scope: str | None = None
+    cooperationMode: str | None = None
+    confirmedFacts: list[str] | None = None
+    ndaType: str | None = None
+
+
+@router.patch("/projects/{project_id}")
+def patch_project_route(
+    project_id: str,
+    body: ProjectPatchBody,
+    session: Session = Depends(get_session),
+):
+    from app.services.project_patch import patch_project
+
+    def _apply(dashboard):
+        return patch_project(
+            dashboard,
+            project_id,
+            priority=body.priority,
+            summary=body.summary,
+            assignees=body.assignees,
+        )
+
+    try:
+        result = run_mutation(session, _apply)
+    except ValueError as exc:
+        code = str(exc)
+        if code == "PROJECT_NOT_FOUND":
+            raise fail("PROJECT_NOT_FOUND", "项目不存在", status=404)
+        if code == "INVALID_PRIORITY":
+            raise fail("INVALID_PRIORITY", "优先级无效", status=400)
+        raise fail("PATCH_FAILED", code, status=400)
+    return ok(result)
+
+
+@router.patch("/projects/{project_id}/brief")
+def patch_project_brief_route(
+    project_id: str,
+    body: BriefPatchBody,
+    session: Session = Depends(get_session),
+):
+    from app.services.project_patch import patch_project_brief
+
+    delta = body.model_dump(exclude_unset=True)
+
+    def _apply(dashboard):
+        return patch_project_brief(dashboard, project_id, delta)
+
+    try:
+        result = run_mutation(session, _apply)
+    except ValueError as exc:
+        if str(exc) == "PROJECT_NOT_FOUND":
+            raise fail("PROJECT_NOT_FOUND", "项目不存在", status=404)
+        raise fail("PATCH_FAILED", str(exc), status=400)
+    return ok(result)
+
+
 @router.patch("/projects/{project_id}/closure/checklist/{item_id}")
 def patch_closure_item(
     project_id: str,
