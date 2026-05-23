@@ -23,9 +23,7 @@ def execute_proposal_dispatch(
     if action != "dispatch":
         return None
 
-    role_id = proposal.get("suggestedRole") or inbox_item.get("from") or "ceo"
-    if role_id == "ceo" and proposal.get("suggestedRole"):
-        role_id = proposal["suggestedRole"]
+    role_id = proposal.get("suggestedRole") or "product"
 
     project_id = inbox_item.get("projectId")
     if not project_id:

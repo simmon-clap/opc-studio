@@ -3,7 +3,7 @@
 | 项 | 内容 |
 |----|------|
 | 版本 | **v1.0-draft** |
-| 状态 | **v1.1 · Phase B 已实现** |
+| 状态 | **v1.2 · Phase C 已实现** |
 | 关联 | [CEO-ORCHESTRATION-ROADMAP.md](./CEO-ORCHESTRATION-ROADMAP.md) · [IMPLEMENTATION.md](./IMPLEMENTATION.md) · [API.md](./API.md) |
 | 代码基线 | OPC Studio **v0.9.0** |
 
@@ -393,10 +393,10 @@ backend/app/
 
 ### Phase C — 能想（P2，v2）
 
-- [ ] CEO Deliberate（LLM 合并提案）
-- [ ] 用户采纳 proposal → 自动 dispatch
-- [ ] 角色 Deliberate（可选）
-- [ ] CEO 低危 auto-dispatch 配置
+- [x] CEO Deliberate（规则合并 + 可选 LLM 注释）
+- [x] 用户采纳 proposal → 自动 dispatch
+- [x] 角色 Deliberate（可选 — 未做 LLM，保持 Observe）
+- [x] CEO 低危 auto-dispatch 配置（`ceoAutoDispatch` 消费）
 
 ---
 

@@ -569,18 +569,42 @@ class Orchestrator:
             aggregates.recompute_all(dashboard)
 
     async def _on_inbox_resolved(self, session: Session, payload: dict[str, Any]) -> None:
-        if payload.get("action") != "approve":
+        action = payload.get("action")
+        inbox_id = payload.get("inboxId")
+        if action != "approve" or not inbox_id:
             return
+
         with mutate(session) as dashboard:
-            task = dispatcher.dispatch_task(
-                dashboard,
-                role_id="dev",
-                project_id="proj-beta",
-                title="PoC 样本测试（请示已批）",
+            item = next(
+                (i for i in dashboard.get("inbox", []) if i.get("id") == inbox_id),
+                None,
             )
-            await self._execute_runner(session, dashboard, task)
+            if not item:
+                return
+
+            category = item.get("category")
+            if category == "proposal":
+                from app.agency.proposal_actions import execute_proposal_dispatch
+
+                task = execute_proposal_dispatch(dashboard, item)
+                if task:
+                    self._append_thread_reply(
+                        dashboard,
+                        f"已采纳建议并派活：**{task.get('title', '任务')}** → {task.get('roleId')}",
+                        msg_type="decision",
+                    )
+            elif category == "request":
+                task = dispatcher.dispatch_task(
+                    dashboard,
+                    role_id="dev",
+                    project_id=item.get("projectId") or "proj-beta",
+                    title="PoC 样本测试（请示已批）",
+                )
+                await self._execute_runner(session, dashboard, task)
+
             aggregates.recompute_all(dashboard)
-            await drain_pending_queue(session, max_tasks=4)
+
+        await drain_pending_queue(session, max_tasks=4)
 
     def _record_run(
         self,

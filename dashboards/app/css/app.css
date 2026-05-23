@@ -926,6 +926,7 @@ mark.art-pending, .art-pending {
 .cat-badge.cat-reminder { background: rgba(255,149,0,0.1); color: var(--orange); }
 .cat-badge.cat-digest { background: rgba(0,113,227,0.1); color: #0071e3; }
 .cat-badge.cat-profile_suggestion { background: rgba(175,82,222,0.12); color: #8e44ad; }
+.cat-badge.cat-proposal { background: rgba(0,113,227,0.12); color: #0071e3; }
 
 /* CEO Office */
 .channel-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }

@@ -1191,6 +1191,7 @@ function renderInbox() {
     { id: "reminder", label: "提醒" },
     { id: "digest", label: "摘要" },
     { id: "profile_suggestion", label: "偏好" },
+    { id: "proposal", label: "建议" },
   ];
   const statusFilters = [
     { id: "active", label: "待办" },
@@ -1290,6 +1291,28 @@ async function openInboxItem(id) {
     return;
   }
 
+  if (item.category === "proposal") {
+    const prop = item.proposal || {};
+    const ceoNote = prop.ceoNote
+      ? `<p class="hint" style="margin-bottom:0.75rem">CEO 评估：${escapeAttr(prop.ceoNote)}</p>`
+      : "";
+    const canDispatch = prop.suggestedAction === "dispatch";
+    openModal(`
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">${channelBadge(item.channel)}<span class="cat-badge cat-proposal">建议</span>${item.resolution === "auto_approved" ? '<span class="cat-badge resolved">已自动派活</span>' : ""}</div>
+      <h2 style="font-size:1.05rem;font-weight:700">${item.title}</h2>
+      <p style="font-size:0.82rem;color:var(--text2);margin:0.5rem 0 1rem;line-height:1.5">${item.preview}</p>
+      ${ceoNote}
+      <p style="font-size:0.72rem;color:var(--text3);margin-bottom:1rem">
+        ${canDispatch ? `建议派给 <strong>${ROLE_SHORT[prop.suggestedRole] || prop.suggestedRole || "—"}</strong>：${prop.suggestedTitle || "—"}` : "建议审阅后再决定是否派活"}
+      </p>
+      <div class="btn-row">
+        ${canDispatch ? `<button class="btn-primary" onclick="resolveProposal('${item.id}','approve')">采纳并派活</button>` : `<button class="btn-primary" onclick="resolveProposal('${item.id}','approve')">标记已阅</button>`}
+        <button class="btn-secondary" onclick="resolveProposal('${item.id}','discuss')">暂不处理</button>
+      </div>
+    `, "wide");
+    return;
+  }
+
   if (item.category === "profile_suggestion" && item.profileSuggestionId) {
     const sug = (data.profileSuggestions || []).find((s) => s.id === item.profileSuggestionId);
     openModal(`
@@ -1367,6 +1390,13 @@ function openHitlDetail(hitlId) {
 }
 
 async function resolveRequest(itemId, action) {
+  await apiPost(`/inbox/${itemId}/resolve`, { action });
+  closeModal();
+  await refreshDashboard();
+  renderAll();
+}
+
+async function resolveProposal(itemId, action) {
   await apiPost(`/inbox/${itemId}/resolve`, { action });
   closeModal();
   await refreshDashboard();
@@ -2092,9 +2122,13 @@ function renderSettings() {
           <input id="rt-ceo-observe" type="number" min="60" max="3600" value="${agency.ceoObserveIntervalSec ?? 300}"/>
           <p class="hint">Phase B 启用 Agency 后生效</p>
         </div>
-        <div class="settings-field runtime-highlight">
+        <div class="settings-field">
           <label><input type="checkbox" id="rt-auto-dispatch" ${auto.enabled ? "checked" : ""}/> <strong>CEO 自动派活</strong></label>
-          <p class="hint">关闭（默认）：自主建议仅进收件箱，由你或 CEO 对话确认后再派活。开启：系统在交付质量稳定后，可对<strong>低危</strong> proposal 自动 dispatch（Phase B+）</p>
+          <p class="hint">开启后，对低危 proposal 在满足交付分 / 冷却条件时自动 dispatch（可在收件箱看到「已自动派活」）</p>
+        </div>
+        <div class="settings-field">
+          <label><input type="checkbox" id="rt-ceo-deliberate-llm" ${agency.ceoDeliberateUseLlm ? "checked" : ""}/> CEO Deliberate 使用 LLM 注释</label>
+          <p class="hint">关闭时仅规则合并同类建议；开启后 CEO 已配 Key 时会对建议加一句评估（optional）</p>
         </div>
         <div class="settings-field">
           <label for="rt-auto-score">自动派活 · 最低交付分</label>
@@ -2236,6 +2270,7 @@ async function saveRuntimeSettings() {
     agency: {
       enabled: document.getElementById("rt-agency-enabled")?.checked ?? true,
       ceoObserveIntervalSec: Number(document.getElementById("rt-ceo-observe")?.value || 300),
+      ceoDeliberateUseLlm: document.getElementById("rt-ceo-deliberate-llm")?.checked ?? false,
     },
     ceoAutoDispatch: {
       enabled: document.getElementById("rt-auto-dispatch")?.checked ?? false,
@@ -2453,6 +2488,7 @@ window.openInboxItem = openInboxItem;
 window.approveHitl = approveHitl;
 window.rejectHitl = rejectHitl;
 window.resolveRequest = resolveRequest;
+window.resolveProposal = resolveProposal;
 window.adoptProfileSuggestion = adoptProfileSuggestion;
 window.dismissProfileSuggestion = dismissProfileSuggestion;
 window.onCeoFilesSelected = onCeoFilesSelected;

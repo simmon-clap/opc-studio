@@ -7,7 +7,9 @@ from typing import Any
 
 from sqlmodel import Session
 
+from app.agency.auto_dispatch import apply_auto_dispatch
 from app.agency.bus import publish_signals
+from app.agency.deliberate import run_ceo_deliberate
 from app.agency.modules.roles import ROLE_OBSERVERS
 from app.services.dashboard_store import get_dashboard, mutate
 from app.services.runtime_settings import get_runtime_settings
@@ -34,7 +36,7 @@ def should_pause_agency(dashboard: dict[str, Any]) -> bool:
     return last.get("direction") == "ceo_to_founder" and last.get("type") == "ack"
 
 
-def tick_agency(session: Session, *, role_id: str | None = None) -> dict[str, Any]:
+async def tick_agency(session: Session, *, role_id: str | None = None) -> dict[str, Any]:
     dashboard = get_dashboard(session)
     if not agency_enabled(dashboard):
         return {"action": "disabled"}
@@ -71,6 +73,10 @@ def tick_agency(session: Session, *, role_id: str | None = None) -> dict[str, An
             }
             telemetry["created"] += result.get("created", 0)
             telemetry["skipped"] += result.get("skipped", 0)
+
+        if role_id in (None, "ceo"):
+            telemetry["deliberate"] = await run_ceo_deliberate(session, dashboard)
+            telemetry["autoDispatch"] = apply_auto_dispatch(dashboard)
 
         meta = dashboard.setdefault("meta", {})
         runtime = meta.setdefault("pulseRuntime", {})

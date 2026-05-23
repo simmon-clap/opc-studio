@@ -159,7 +159,7 @@ class PulseCoordinator:
                         dashboard,
                         apply_load_multiplier=True,
                     ):
-                        tick_agency(session, role_id=role)
+                        await tick_agency(session, role_id=role)
 
             self._publish_stream(session)
             self._write_runtime_heartbeat(session)
