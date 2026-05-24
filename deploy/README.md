@@ -54,7 +54,7 @@ git tag v$(cat VERSION)
 
 | 平台 | 免费域名 | 能否跑整套 OPC Studio |
 |------|----------|------------------------|
-| **Render** | `*.onrender.com` | ✅ Docker + 持久盘 |
+| **Render** | `*.onrender.com` | ✅ Docker（Free 无持久盘，演示可用） |
 | **Fly.io** | `*.fly.dev` | ✅ Docker + Volume |
 | Vercel | `*.vercel.app` | ❌ 无持久 SQLite |
 | Cloudflare Pages | `*.pages.dev` | ❌ 仅静态页 |
@@ -68,7 +68,7 @@ git tag v$(cat VERSION)
 4. 部署完成后访问 `https://opc-studio.onrender.com/dashboards/app/`
 5. 在 Render 环境变量中可选设置 `OPC_ACCESS_TOKEN`（公网鉴权）
 
-`render.yaml` 已配置：Docker 构建、健康检查、`OPC_SECRET_KEY` 自动生成、1GB 磁盘挂载 `/data` 存 SQLite。
+`render.yaml` 已配置：Docker 构建、健康检查、`OPC_SECRET_KEY` 自动生成。Free 档不含持久盘，重新部署后 SQLite 会重置；需长期数据请升级 Render 付费档并加 `disk` 块，或改用 Fly.io Volume。
 
 ### 备选：Fly.io（GitHub Actions）
 
