@@ -5,6 +5,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -38,7 +39,7 @@ from app.api import (
     events,
     meta,
 )
-from app.config import APP_VERSION, PROJECT_ROOT
+from app.config import APP_VERSION, DATA_DIR, PROJECT_ROOT
 from app.security.access_middleware import AccessTokenMiddleware
 from app.db import init_db, session_scope
 from app.pulse.coordinator import get_pulse_coordinator, start_pulse_loop
@@ -73,6 +74,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_request: Request, exc: RequestValidationError):
+    parts: list[str] = []
+    for err in exc.errors():
+        loc = [str(x) for x in err.get("loc", []) if x not in ("body", "query", "path")]
+        field = ".".join(loc) or "request"
+        msg = err.get("msg", "参数无效")
+        parts.append(f"{field}: {msg}")
+    message = "；".join(parts) if parts else "请求参数无效"
+    return JSONResponse(
+        status_code=422,
+        content={
+            "ok": False,
+            "error": {"code": "VALIDATION_ERROR", "message": message, "details": exc.errors()},
+        },
+    )
 
 
 @app.exception_handler(HTTPException)
@@ -118,6 +137,15 @@ for module in (
     meta,
 ):
     app.include_router(module.router, prefix="/api/v1")
+
+# User uploads live on writable DATA_DIR (cloud-safe); mount before bundled /assets.
+_uploads_dir = DATA_DIR / "uploads"
+_uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount(
+    "/assets/uploads",
+    StaticFiles(directory=str(_uploads_dir)),
+    name="upload-assets",
+)
 
 # Static assets from project root
 if (PROJECT_ROOT / "dashboards" / "app").exists():

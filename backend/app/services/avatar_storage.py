@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.config import PROJECT_ROOT
+from app.config import DATA_DIR
 
-AVATAR_DIR = PROJECT_ROOT / "assets" / "uploads" / "avatars"
+AVATAR_DIR = DATA_DIR / "uploads" / "avatars"
+AVATAR_URL_PREFIX = "/assets/uploads/avatars"
 MAX_BYTES = 5 * 1024 * 1024
 
 MIME_EXT = {
@@ -56,18 +57,18 @@ def save_role_avatar(role_id: str, raw: bytes, content_type: str | None) -> str:
             old.unlink()
     dest = AVATAR_DIR / f"{role_id}{ext}"
     dest.write_bytes(raw)
-    return f"/assets/uploads/avatars/{role_id}{ext}"
+    return f"{AVATAR_URL_PREFIX}/{role_id}{ext}"
 
 
 def resolve_avatar_url(role_id: str, stored: str | None = None) -> str:
     """Return a URL that matches an on-disk upload, else default avatar."""
     AVATAR_DIR.mkdir(parents=True, exist_ok=True)
-    if stored and stored.startswith("/assets/uploads/avatars/"):
+    if stored and stored.startswith(f"{AVATAR_URL_PREFIX}/"):
         name = Path(stored).name
         if (AVATAR_DIR / name).is_file():
             return stored
     for ext in MIME_EXT.values():
         path = AVATAR_DIR / f"{role_id}{ext}"
         if path.is_file():
-            return f"/assets/uploads/avatars/{role_id}{ext}"
+            return f"{AVATAR_URL_PREFIX}/{role_id}{ext}"
     return f"/assets/avatars/{role_id}.png"

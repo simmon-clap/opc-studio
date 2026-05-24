@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, UploadFile
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlmodel import Session
 
 from app.api.deps import fail, ok
@@ -56,12 +56,22 @@ class RoleConfigTestBody(BaseModel):
 
 class RegistryCreateBody(BaseModel):
     id: str = Field(min_length=2, max_length=25)
-    name: str
+    name: str = Field(min_length=1)
     title: str | None = None
     department: str | None = None
     capabilities: list[str] = Field(default_factory=lambda: ["text"])
     dispatchable: bool = True
     shortLabel: str | None = None
+
+    @field_validator("id")
+    @classmethod
+    def validate_role_id(cls, value: str) -> str:
+        from app.presentation.roles_registry import ROLE_ID_PATTERN
+
+        role_id = value.strip().lower()
+        if not ROLE_ID_PATTERN.match(role_id):
+            raise ValueError("须以小写字母开头，仅含 a-z、0-9、_、-，2–25 位")
+        return role_id
 
 
 class RegistryPatchBody(BaseModel):

@@ -1,5 +1,18 @@
 const API_BASE = "/api/v1";
 
+function formatApiError(json, status) {
+  if (json?.error?.message) return json.error.message;
+  if (Array.isArray(json?.detail)) {
+    return json.detail
+      .map((err) => {
+        const field = (err.loc || []).filter((x) => !["body", "query", "path"].includes(x)).join(".");
+        return field ? `${field}: ${err.msg}` : err.msg;
+      })
+      .join("；");
+  }
+  return `HTTP ${status}`;
+}
+
 async function apiFetch(method, path, body) {
   const opts = { method, headers: {} };
   if (body !== undefined) {
@@ -11,7 +24,7 @@ async function apiFetch(method, path, body) {
   if (ct.includes("application/json")) {
     const json = await res.json();
     if (!res.ok || json.ok === false) {
-      throw new Error(json.error?.message || `HTTP ${res.status}`);
+      throw new Error(formatApiError(json, res.status));
     }
     mergeApiResponse(json);
     return json;

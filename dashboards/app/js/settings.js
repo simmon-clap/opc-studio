@@ -130,6 +130,16 @@ function stgEscape(s) {
     .replace(/</g, "&lt;");
 }
 
+const STG_ROLE_ID_PATTERN = /^[a-z][a-z0-9_-]{1,24}$/;
+
+function validateStgRoleId(id) {
+  if (!id) return "请填写角色 ID";
+  if (!STG_ROLE_ID_PATTERN.test(id)) {
+    return "ID 须以小写英文开头，仅含 a-z、0-9、_、-，至少 2 个字符（如 brand）";
+  }
+  return "";
+}
+
 async function loadSettingsView() {
   try {
     stgRoleConfigs = await loadRoleConfigs();
@@ -706,7 +716,7 @@ function renderStgNewRoleModal() {
         </div>
         <div class="settings-fields">
           <div class="settings-field"><label>角色 ID *</label>
-            <input id="stg-new-id" placeholder="brand · 小写英文"/></div>
+            <input id="stg-new-id" placeholder="brand · 小写英文，至少 2 位"/></div>
           <div class="settings-field"><label>显示名 *</label>
             <input id="stg-new-name" placeholder="苏见"/></div>
           <div class="settings-field"><label>职位</label>
@@ -747,8 +757,9 @@ async function submitStgNewRole() {
   const id = document.getElementById("stg-new-id")?.value?.trim().toLowerCase();
   const name = document.getElementById("stg-new-name")?.value?.trim();
   const caps = [...document.querySelectorAll('input[name="stg-new-cap"]:checked')].map((el) => el.value);
-  if (!id || !name || !caps.length) {
-    if (toast) toast.textContent = "请填写 ID、显示名并选择能力";
+  const idErr = validateStgRoleId(id);
+  if (idErr || !name || !caps.length) {
+    if (toast) toast.textContent = idErr || "请填写 ID、显示名并选择能力";
     return;
   }
   try {
