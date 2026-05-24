@@ -13,6 +13,36 @@ function formatApiError(json, status) {
   return `HTTP ${status}`;
 }
 
+async function loadExternalScript(url) {
+  if (!window.__opcScriptLoads) window.__opcScriptLoads = {};
+  if (window.__opcScriptLoads[url]) return window.__opcScriptLoads[url];
+  window.__opcScriptLoads[url] = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = url;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`脚本加载失败：${url}`));
+    document.head.appendChild(script);
+  });
+  return window.__opcScriptLoads[url];
+}
+
+async function ensureHtml2Pdf() {
+  if (window.html2pdf) return;
+  await loadExternalScript(
+    "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"
+  );
+}
+
+async function ensureJSZip() {
+  if (window.JSZip) return;
+  await loadExternalScript("https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js");
+}
+
+window.loadExternalScript = loadExternalScript;
+window.ensureHtml2Pdf = ensureHtml2Pdf;
+window.ensureJSZip = ensureJSZip;
+
 async function apiFetch(method, path, body) {
   const opts = { method, headers: {} };
   if (body !== undefined) {

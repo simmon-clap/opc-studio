@@ -114,20 +114,24 @@ def build_stream_payload(
         inbox_sig["changed"] = inbox_sig["sig"] != (prev_modules.get("inbox") or {}).get("sig")
         agency_sig["changed"] = agency_sig["sig"] != (prev_modules.get("agency") or {}).get("sig")
         exec_sig["changed"] = exec_sig["sig"] != (prev_modules.get("execution") or {}).get("sig")
+        hand_sig["changed"] = hand_sig["sig"] != (prev_modules.get("handoff") or {}).get("sig")
     else:
         pres_sig["changed"] = True
         inbox_sig["changed"] = True
         agency_sig["changed"] = True
         exec_sig["changed"] = True
+        hand_sig["changed"] = True
 
     changed_domains: list[str] = []
     if exec_sig.get("changed"):
-        changed_domains.extend(["roles", "projects", "pulse"])
+        changed_domains.extend(["roles", "projects", "pulse", "tasks"])
     if pres_sig.get("changed"):
-        changed_domains.extend(["projects", "pulse", "ceo"])
+        changed_domains.extend(["projects", "pulse", "ceo", "presentation", "roles"])
     if inbox_sig.get("changed"):
         changed_domains.extend(["inbox", "pulse"])
     if agency_sig.get("changed"):
+        changed_domains.extend(["inbox", "pulse"])
+    if hand_sig.get("changed"):
         changed_domains.append("inbox")
 
     payload: dict[str, Any] = {

@@ -26,6 +26,7 @@ from app.services.channel_state import (
     sync_channel_status,
     wechat_settings,
 )
+from app.services.feishu_client import parse_feishu_message_event, verify_feishu_signature
 from app.services.openclaw_detect import detect_openclaw
 from app.services.dashboard_store import get_dashboard, mutate
 

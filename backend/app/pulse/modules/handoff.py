@@ -19,16 +19,19 @@ def _now_iso() -> str:
 
 def tick_handoff(session: Session) -> dict[str, Any]:
     pending = session.exec(select(Handoff).where(Handoff.status == "pending")).all()
-    consumed = 0
-    for row in pending:
-        payload: dict[str, Any] = {}
-        if row.payload_json:
-            try:
-                payload = json.loads(row.payload_json)
-            except json.JSONDecodeError:
-                payload = {}
+    if not pending:
+        return {"consumed": 0}
 
-        with mutate(session) as dashboard:
+    consumed = 0
+    with mutate(session) as dashboard:
+        for row in pending:
+            payload: dict[str, Any] = {}
+            if row.payload_json:
+                try:
+                    payload = json.loads(row.payload_json)
+                except json.JSONDecodeError:
+                    payload = {}
+
             title = f"Handoff · {row.from_role_id} → {row.to_role_id}"
             preview = (payload.get("note") or payload.get("artifactId") or "")[:80]
             exists = any(
@@ -56,9 +59,8 @@ def tick_handoff(session: Session) -> dict[str, Any]:
                     entry["artifactId"] = payload["artifactId"]
                 dashboard.setdefault("inbox", []).insert(0, entry)
 
-        row.status = "consumed"
-        session.add(row)
-        session.commit()
-        consumed += 1
+            row.status = "consumed"
+            session.add(row)
+            consumed += 1
 
     return {"consumed": consumed}

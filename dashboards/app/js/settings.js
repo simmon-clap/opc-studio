@@ -143,56 +143,63 @@ function validateStgRoleId(id) {
 }
 
 async function loadSettingsView() {
-  try {
-    stgRoleConfigs = await loadRoleConfigs();
-  } catch (_) {
-    stgRoleConfigs = data?.roleConfig || [];
-  }
-  try {
-    stgRegistry = (await apiGet("/roles/registry")).data || [];
-  } catch (_) {
-    stgRegistry = data?.presentation?.roles || [];
-  }
-  try {
-    stgRuntimeSettings = (await apiGet("/runtime/settings")).data;
-  } catch (_) {
-    stgRuntimeSettings = data?.systemSettings?.orchestration || data?.meta?.runtimeSettings || null;
-  }
-  try {
-    stgChannelSetup = (await apiGet("/channels/setup")).data;
-  } catch (_) {
-    stgChannelSetup = null;
-  }
-  try {
-    stgChannelSettings = (await apiGet("/system/settings")).data?.channels || null;
-  } catch (_) {
-    stgChannelSettings = data?.systemSettings?.channels || null;
-  }
-  try {
-    stgChannelStatus = (await apiGet("/channels/status")).data;
-  } catch (_) {
-    stgChannelStatus = data?.channels || null;
-  }
-  try {
-    stgWechatDetect = (await apiGet("/channels/wechat/detect")).data;
-  } catch (_) {
-    stgWechatDetect = null;
-  }
-  try {
-    stgToolRegistry = (await apiGet("/tools")).data || [];
-  } catch (_) {
-    stgToolRegistry = [];
-  }
-  try {
-    stgSkillRoutes = (await apiGet("/meta/skill-routes")).data || {};
-  } catch (_) {
-    stgSkillRoutes = data?.meta?.skillRoutes || {};
-  }
-  try {
-    stgSkillChains = (await apiGet("/skill-chains")).data || [];
-  } catch (_) {
-    stgSkillChains = data?.skillChains || [];
-  }
+  const [
+    roleConfigsRes,
+    registryRes,
+    runtimeRes,
+    channelSetupRes,
+    channelSettingsRes,
+    channelStatusRes,
+    wechatDetectRes,
+    toolsRes,
+    skillRoutesRes,
+    skillChainsRes,
+  ] = await Promise.allSettled([
+    loadRoleConfigs(),
+    apiGet("/roles/registry"),
+    apiGet("/runtime/settings"),
+    apiGet("/channels/setup"),
+    apiGet("/system/settings"),
+    apiGet("/channels/status"),
+    apiGet("/channels/wechat/detect"),
+    apiGet("/tools"),
+    apiGet("/meta/skill-routes"),
+    apiGet("/skill-chains"),
+  ]);
+
+  stgRoleConfigs =
+    roleConfigsRes.status === "fulfilled" ? roleConfigsRes.value : data?.roleConfig || [];
+  stgRegistry =
+    registryRes.status === "fulfilled"
+      ? registryRes.value.data || []
+      : data?.presentation?.roles || [];
+  stgRuntimeSettings =
+    runtimeRes.status === "fulfilled"
+      ? runtimeRes.value.data
+      : data?.systemSettings?.orchestration || data?.meta?.runtimeSettings || null;
+  stgChannelSetup =
+    channelSetupRes.status === "fulfilled" ? channelSetupRes.value.data : null;
+  stgChannelSettings =
+    channelSettingsRes.status === "fulfilled"
+      ? channelSettingsRes.value.data?.channels || null
+      : data?.systemSettings?.channels || null;
+  stgChannelStatus =
+    channelStatusRes.status === "fulfilled"
+      ? channelStatusRes.value.data
+      : data?.channels || null;
+  stgWechatDetect =
+    wechatDetectRes.status === "fulfilled" ? wechatDetectRes.value.data : null;
+  stgToolRegistry =
+    toolsRes.status === "fulfilled" ? toolsRes.value.data || [] : [];
+  stgSkillRoutes =
+    skillRoutesRes.status === "fulfilled"
+      ? skillRoutesRes.value.data || {}
+      : data?.meta?.skillRoutes || {};
+  stgSkillChains =
+    skillChainsRes.status === "fulfilled"
+      ? skillChainsRes.value.data || []
+      : data?.skillChains || [];
+
   if (!stgRegistry.find((r) => r.id === stgRoleId) && stgRegistry.length) {
     stgRoleId = stgRegistry[0].id;
   }

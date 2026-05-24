@@ -48,14 +48,30 @@ class PulseCoordinator:
 
     async def _loop(self) -> None:
         await asyncio.sleep(0.5)
+        idle_ticks = 0
         while True:
             try:
-                await self.tick()
+                busy = await self.tick()
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception("Pulse tick failed")
-            await asyncio.sleep(1.0)
+                busy = False
+            if busy:
+                idle_ticks = 0
+                await asyncio.sleep(1.0)
+            else:
+                idle_ticks += 1
+                await asyncio.sleep(min(5.0, 1.0 + idle_ticks * 0.75))
+
+    def _system_idle(self, dashboard: dict[str, Any]) -> bool:
+        exec_sig = execution_signature(dashboard)
+        meta = dashboard.get("meta") or {}
+        if exec_sig["pending"] > 0 or exec_sig["running"] > 0:
+            return False
+        if meta.get("orchestrationActive"):
+            return False
+        return True
 
     def _interval_multiplier(self, dashboard: dict[str, Any]) -> float:
         exec_sig = execution_signature(dashboard)
@@ -94,21 +110,28 @@ class PulseCoordinator:
         self._last_run[module_id] = now
         return True
 
-    async def tick(self) -> None:
+    async def tick(self) -> bool:
+        ran_work = False
         with session_scope() as session:
             dashboard = get_dashboard(session)
             if not pulse_enabled(dashboard):
-                return
+                return False
             settings = get_runtime_settings(dashboard)
             pulse_cfg = settings.get("pulse", {})
             agency_cfg = settings.get("agency", {})
+            idle = self._system_idle(dashboard)
+
+            pres_interval = float(pulse_cfg.get("presentationIntervalSec") or 2)
+            if idle:
+                pres_interval = float(pulse_cfg.get("presentationIdleIntervalSec") or 10)
 
             if self._should_run(
                 "presentation",
-                float(pulse_cfg.get("presentationIntervalSec") or 2),
+                pres_interval,
                 dashboard,
             ):
                 presentation.tick_presentation(session)
+                ran_work = True
 
             if self._should_run(
                 "reconcile",
@@ -116,13 +139,15 @@ class PulseCoordinator:
                 dashboard,
             ):
                 reconcile.tick_reconcile(session)
+                ran_work = True
 
             if self._should_run(
                 "handoff",
                 float(pulse_cfg.get("handoffIntervalSec") or 10),
                 dashboard,
             ):
-                handoff.tick_handoff(session)
+                result = handoff.tick_handoff(session)
+                ran_work = ran_work or bool(result.get("consumed"))
 
             if self._should_run(
                 "delivery",
@@ -130,6 +155,7 @@ class PulseCoordinator:
                 dashboard,
             ):
                 delivery.tick_delivery(session)
+                ran_work = True
 
             if self._should_run(
                 "commitments",
@@ -137,6 +163,7 @@ class PulseCoordinator:
                 dashboard,
             ):
                 commitments.tick_commitments(session)
+                ran_work = True
 
             exec_interval = float(pulse_cfg.get("executionIntervalSec") or 5)
             if self._should_run(
@@ -146,6 +173,7 @@ class PulseCoordinator:
                 apply_exec_idle=True,
             ):
                 await execution.tick_execution(session)
+                ran_work = True
 
             if agency_cfg.get("enabled"):
                 ceo_interval = float(agency_cfg.get("ceoObserveIntervalSec") or 300)
@@ -160,9 +188,12 @@ class PulseCoordinator:
                         apply_load_multiplier=True,
                     ):
                         await tick_agency(session, role_id=role)
+                        ran_work = True
 
             self._publish_stream(session)
-            self._write_runtime_heartbeat(session)
+            if not idle:
+                self._write_runtime_heartbeat(session)
+        return ran_work
 
     def _write_runtime_heartbeat(self, session: Session) -> None:
         now = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")

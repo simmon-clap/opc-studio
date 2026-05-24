@@ -523,6 +523,7 @@ async function artifactExport(format) {
 }
 
 async function exportArtifactZip(art) {
+  await ensureJSZip();
   if (!window.JSZip || !(art.files || []).length) return;
   const zip = new JSZip();
   (art.files || []).forEach((f) => zip.file(f.path, f.content || ""));

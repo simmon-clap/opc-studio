@@ -21,6 +21,7 @@ function buildPdfExportNode({ title, subtitle, bodyHtml }) {
 }
 
 async function exportHtmlToPdf(node, filename) {
+  await ensureHtml2Pdf();
   if (!window.html2pdf) {
     throw new Error("PDF 组件未加载，请刷新页面后重试");
   }

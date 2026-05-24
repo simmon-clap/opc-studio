@@ -59,8 +59,8 @@ let seenDispatchIds = new Set();
 let ceoTypingTimer = null;
 let lastAnimatedCeoMsgId = null;
 let dispatchBubbleTimer = null;
-const SYNC_INTERVAL_MS = 15000;
-const SYNC_FAST_MS = 8000;
+const SYNC_INTERVAL_MS = 45000;
+const SYNC_FAST_MS = 30000;
 const COLLAB_COLORS = ["#0071e3", "#34c759", "#ff9500", "#af52de", "#ff3b30"];
 
 const CLIENT_STATUS = { active: "合作中", prospect: "洽谈", renewal: "续费", lead: "线索" };
@@ -207,6 +207,12 @@ async function handlePulseStream(payload) {
 
   if (!needPresentation && !needInbox && !needExecution) return;
 
+  if (isPulseStreamHealthy() && payload?.modules) {
+    lastSyncAt = Date.now();
+    scheduleLiveSync();
+    return;
+  }
+
   await refreshDashboard();
   lastSyncAt = Date.now();
   applyBrandMeta();
@@ -265,6 +271,10 @@ function isSyncFast() {
   return modalOpen || sheetOpen || !!document.querySelector(".ceo-office") || onOverview;
 }
 
+function isPulseStreamHealthy() {
+  return pulseSSE && pulseSSE.readyState === EventSource.OPEN;
+}
+
 function startLiveSync() {
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) tickLiveSync();
@@ -280,7 +290,10 @@ function scheduleLiveSync() {
 }
 
 async function tickLiveSync() {
-  if (pulseSSE && Date.now() - lastSyncAt < SYNC_INTERVAL_MS - 1000) {
+  if (
+    isPulseStreamHealthy()
+    && Date.now() - lastSyncAt < SYNC_INTERVAL_MS - 2000
+  ) {
     scheduleLiveSync();
     return;
   }
@@ -1869,12 +1882,15 @@ async function pollCeoThreadUntilSettled(workflowPending, maxMs = 180000, ctrl =
   const start = Date.now();
   let stablePolls = 0;
   let lastSig = "";
+  let pollCount = 0;
   let wasPending = isCeoThreadPending(data.ceoThread || []);
 
   while (Date.now() - start < maxMs) {
     if (ctrl?.stop && !workflowPending) return;
+    pollCount += 1;
     try {
       const json = await apiGet("/ceo/thread");
+      mergeApiResponse(json);
       data.ceoThread = json.data || data.ceoThread;
       const pending = isCeoThreadPending(data.ceoThread);
       if (wasPending && !pending) {
@@ -1887,13 +1903,20 @@ async function pollCeoThreadUntilSettled(workflowPending, maxMs = 180000, ctrl =
         updateCeoThreadPane(true);
       }
       wasPending = pending;
-      await refreshDashboard();
+      const needsFullSync =
+        !!(data?.meta?.orchestrationActive)
+        || pollCount === 1
+        || pollCount % 4 === 0
+        || !isPulseStreamHealthy();
+      if (needsFullSync) {
+        await refreshDashboard();
+        renderOverview();
+      }
       refreshCeoCommitmentsPanel();
       updateCeoDispatchStatus({
         workflowPending: pending || !!(data?.meta?.orchestrationActive),
         dispatchSummary: data?.meta?.lastCeoTurn || {},
       });
-      renderOverview();
     } catch (_) {
       /* retry */
     }

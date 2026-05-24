@@ -7,11 +7,13 @@ from typing import Any
 DOMAIN_KEYS: dict[str, list[str]] = {
     "pulse": ["pulse", "stats"],
     "inbox": ["inbox", "pulse"],
-    "roles": ["roles", "tasks", "pulse"],
+    "roles": ["roles", "tasks", "pulse", "presentation"],
     "finance": ["costs", "financePresentation", "pulse"],
     "costs": ["costs", "financePresentation"],
     "projects": ["projects", "presentation"],
-    "ceo": ["ceoThread", "meta"],
+    "presentation": ["presentation", "overviewLive", "roles", "projects"],
+    "tasks": ["tasks", "roles", "pulse"],
+    "ceo": ["ceoThread", "meta", "commitments"],
     "skills": ["skillCatalog", "skillChains", "meta"],
     "channels": ["channels", "systemSettings"],
 }
