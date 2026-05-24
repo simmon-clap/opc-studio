@@ -2,8 +2,8 @@
 
 | 项 | 内容 |
 |----|------|
-| 版本 | v1.0 |
-| 状态 | Phase 2 开发基准 · **前后端一次性对齐** |
+| 版本 | v1.1 |
+| 状态 | Phase 2 **已实现** · 渠道/设置扩展已落地 · `/events` **planned** · [DEV-STATUS.md](./DEV-STATUS.md) |
 | 黄金样本 | [`mock/dashboard.json`](../mock/dashboard.json) |
 | 后端实现 | [BACKEND.md](./BACKEND.md) |
 
@@ -178,7 +178,7 @@ Phase 2 本地：**无 Header**。绑定 `127.0.0.1` 即可。
 |------|------|------|-------|
 | GET | `/api/v1/dashboard` | **全量看板数据**，结构 ≡ `mock/dashboard.json` | 2a |
 | GET | `/api/v1/health` | `{ "ok": true, "version": "0.1.0" }` | 2a |
-| GET | `/api/v1/events` | SSE 推送（见 §7） | 2c |
+| GET | `/api/v1/events` | SSE 推送（见 §7）· **planned，未实现** | 2c-opt |
 
 ### 5.2 项目 & 产出物
 
@@ -243,7 +243,19 @@ Phase 2 本地：**无 Header**。绑定 `127.0.0.1` 即可。
 | GET | `/api/v1/roles/{id}/tasks` | 角色任务（running + pending） | 2a |
 | GET | `/api/v1/roles/config` | 角色 LLM 配置（**Key 打码**） | 2e |
 | PUT | `/api/v1/roles/config/{roleId}` | 更新配置（见 §5.7.1） | 2e |
+| POST | `/api/v1/roles/{roleId}/avatar` | 上传头像（multipart `file`） | 2e |
+| GET | `/api/v1/settings/summary` | 设置页聚合摘要 | 设置 |
+| GET/PATCH | `/api/v1/system/settings` | 系统设置（编排/渠道等） | 设置 |
+| GET/POST | `/api/v1/roles/registry` | 角色注册表 CRUD | 设置 |
+| PATCH | `/api/v1/roles/{id}/identity` | 角色身份（name/title/avatar…） | 设置 |
+| GET/PUT | `/api/v1/roles/{id}/profile` | 角色 Profile Markdown | 设置 |
+| GET | `/api/v1/tools` · `/tools/effective/{roleId}` | Tool Registry | 设置 |
+| GET/POST | `/api/v1/skills` · `/skills/import` · `/skills/{id}/activate` | Skill Hub | 设置 |
+| GET/POST | `/api/v1/skill-chains` | Skill 链 | 设置 |
+| GET/POST | `/api/v1/mcp/connections` · `.../health` | MCP 连接（bridge **stub**） | 设置 |
 | GET | `/api/v1/channels/status` | 渠道连接状态 | 2d |
+| GET | `/api/v1/channels/setup` | 渠道接入指引（ClawBot CLI 等） | 2d |
+| POST | `/api/v1/channels/inbound` | 统一渠道入站（wechat/feishu/web） | 2d |
 
 #### 5.7.1 PUT 角色配置 Body
 
@@ -260,12 +272,12 @@ Phase 2 本地：**无 Header**。绑定 `127.0.0.1` 即可。
 
 响应中 `apiKey` 仅 `{ "masked": "...x7Kp" }`；完整 Key 永不回传。
 
-### 5.8 飞书（Phase 2d）
+### 5.8 飞书（Phase 2d · 未完成）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/v1/channels/feishu/webhook` | 飞书事件回调（验签） |
-| POST | `/api/v1/channels/feishu/send` | 主动发消息（内部用） |
+| POST | `/api/v1/channels/feishu/webhook` | 飞书事件回调（验签）· **501 占位** |
+| POST | `/api/v1/channels/feishu/send` | 主动发消息（内部用）· **未实现** |
 
 ---
 
@@ -374,7 +386,9 @@ ceoThread += ceo_to_founder (type=ack, 固定回复 Mock 文案或 Agent 生成)
 
 ---
 
-## 7. SSE 事件（Phase 2c 可选）
+## 7. SSE 事件（Phase 2c-opt · **planned，未实现**）
+
+> 当前前端使用 `GET /dashboard` 全量 refresh + `/pulse/stream` sig 推送。统一 `/events` 见 [DEV-STATUS UX-1](./DEV-STATUS.md#35-p2--体验--上云)。
 
 ```
 GET /api/v1/events

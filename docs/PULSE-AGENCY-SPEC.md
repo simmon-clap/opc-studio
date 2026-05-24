@@ -2,10 +2,10 @@
 
 | 项 | 内容 |
 |----|------|
-| 版本 | **v1.0-draft** |
-| 状态 | **v1.2 · Phase C 已实现** |
+| 版本 | **v1.2** |
+| 状态 | **Phase A–C 运行时 ✅** · 验收4 前端轮询 **❌** · [DEV-STATUS.md](./DEV-STATUS.md) |
 | 关联 | [CEO-ORCHESTRATION-ROADMAP.md](./CEO-ORCHESTRATION-ROADMAP.md) · [IMPLEMENTATION.md](./IMPLEMENTATION.md) · [API.md](./API.md) |
-| 代码基线 | OPC Studio **v0.9.0** |
+| 代码基线 | OPC Studio **v0.9.x** · 160 tests |
 
 ---
 
@@ -372,16 +372,16 @@ backend/app/
 
 ## 10. v1 实施范围（确认后开工）
 
-### Phase A — 能跑（P0，先做）
+### Phase A — 能跑（P0，先做） ✅
 
-- [ ] `pulse.coordinator` + 进程内 asyncio 循环
-- [ ] `execution` 模块：pending → running → 现有 runner 链路
-- [ ] `reconcile` 模块：启动 + 120s
-- [ ] `dispatch_task` 默认 `pending`
-- [ ] `handoff` consumer
-- [ ] `meta.pulseRuntime` 写入
-- [ ] `/pulse/stream` 多模块 sig
-- [ ] 测试：pending 任务在无 HTTP 情况下被执行完
+- [x] `pulse.coordinator` + 进程内 asyncio 循环
+- [x] `execution` 模块：pending → running → 现有 runner 链路
+- [x] `reconcile` 模块：启动 + 120s
+- [x] `dispatch_task` 默认 `pending`
+- [x] `handoff` consumer
+- [x] `meta.pulseRuntime` 写入
+- [x] `/pulse/stream` 多模块 sig
+- [x] 测试：pending 任务在无 HTTP 情况下被执行完
 
 ### Phase B — 能看（P1）
 
@@ -416,12 +416,12 @@ backend/app/
 
 ## 12. 验收口径（v1 完成定义）
 
-1. CEO Turn 派活后 **关闭浏览器**，任务仍能在 30s 内开始执行并产出 artifact 或 failed。
-2. 服务重启后 **无永久 running 僵尸**；pending 队列继续消费。
-3. `handoffs` pending 在 60s 内被消费或显式失败。
-4. SSE 推送后前端 **不全量 2s 轮询**（仅 sig 变化时拉 dashboard）。
-5. Agency Observe 产生 proposal 时 **不消耗 LLM**；同 fingerprint 不刷屏。
-6. 用户 CEO 对话进行中 **无自主 inbox 打扰**（pauseReason=`ceo_thread_active`）。
+1. ✅ CEO Turn 派活后 **关闭浏览器**，任务仍能在 30s 内开始执行并产出 artifact 或 failed。
+2. ✅ 服务重启后 **无永久 running 僵尸**；pending 队列继续消费。
+3. ✅ `handoffs` pending 在 60s 内被消费或显式失败。
+4. ❌ SSE 推送后前端 **不全量 2s 轮询**（仅 sig 变化时拉 dashboard）— **仍约 15s 全量 pull**。
+5. ✅ Agency Observe 产生 proposal 时 **不消耗 LLM**；同 fingerprint 不刷屏。
+6. ✅ 用户 CEO 对话进行中 **无自主 inbox 打扰**（pauseReason=`ceo_thread_active`）。
 
 ---
 

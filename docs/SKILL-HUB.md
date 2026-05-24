@@ -2,6 +2,9 @@
 
 > Skill = 可安装、可绑定、可路由的 **工作流包**。Hub 在 **系统设置**；角色只 **勾选**；运行在 **Orchestrator → Router → Runner → Tool/MCP**。
 
+| 状态 | **后端 ✅ · UI 部分缺** · [DEV-STATUS §3.3](./DEV-STATUS.md#33-p1--设置--skill-ui) |
+|------|------|
+
 ## 1. 与 Tool / MCP / Model 的关系
 
 ```
@@ -328,7 +331,18 @@ sequenceDiagram
 
 ## 13. 分期对照
 
-见 [SETTINGS-PLATFORM-ROADMAP.md](./SETTINGS-PLATFORM-ROADMAP.md) Epic 2–5。
+见 [SETTINGS-PLATFORM-ROADMAP.md](./SETTINGS-PLATFORM-ROADMAP.md) Epic 2–5 · [DEV-STATUS.md](./DEV-STATUS.md)。
+
+### 实现状态（2026-05）
+
+| 项 | 状态 |
+|----|------|
+| import / activate / enabledSkills | ✅ |
+| skill-install API | ✅ |
+| `skill_proposal` inbox 专用 Modal | ❌ |
+| Brief 附件 → 自动提案 | ❌ |
+| 详情 drawer · 搜索 | ❌ |
+| Skill 链设置页编辑器 | ❌ |
 
 **Epic 3 最小可演示：**
 

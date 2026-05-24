@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
-
 from typing import Any
 
 from sqlmodel import Session
@@ -28,6 +27,19 @@ class CeoReviewResult:
     note: str = ""
     directive: RoleDirective | None = None
     score: int = 0
+
+
+def _append_review_note(artifact: dict[str, Any], note: str, *, passed: bool) -> None:
+    artifact.setdefault("reviewNotes", []).insert(
+        0,
+        {
+            "by": "ceo",
+            "at": _now_iso(),
+            "note": note,
+            "passed": passed,
+            "round": len(artifact.get("reviewNotes") or []) + 1,
+        },
+    )
 
 
 def review_artifact(
@@ -84,14 +96,65 @@ def review_artifact(
     return CeoReviewResult(action="pass", score=score)
 
 
-def _append_review_note(artifact: dict[str, Any], note: str, *, passed: bool) -> None:
-    artifact.setdefault("reviewNotes", []).insert(
-        0,
-        {
-            "by": "ceo",
-            "at": _now_iso(),
-            "note": note,
-            "passed": passed,
-            "round": len(artifact.get("reviewNotes") or []) + 1,
-        },
-    )
+async def review_artifact_async(
+    session: Session | None,
+    dashboard: dict[str, Any],
+    artifact: dict[str, Any],
+    *,
+    project_id: str,
+) -> CeoReviewResult:
+    """Rules first; optional LLM overlay when CEO role has Key."""
+    base = review_artifact(session, dashboard, artifact, project_id=project_id)
+    if not session or base.action != "pass":
+        return base
+    try:
+        from app.services.llm_client import LlmError, chat_completion
+        from app.services.role_config_service import get_role_runtime_config
+
+        cfg = get_role_runtime_config(session, dashboard, "ceo")
+        if not cfg.is_configured:
+            return base
+        kind = artifact.get("kind") or artifact.get("type") or ""
+        content = (artifact.get("content") or "")[:6000]
+        prompt = (
+            "你是 CEO 内审。仅输出 JSON："
+            '{"action":"pass|revision","score":0-100,"note":"简短中文"}'
+            f"\n\n产出类型：{kind}\n\n{content}"
+        )
+        resp = await chat_completion(
+            cfg,
+            [
+                {"role": "system", "content": "CEO artifact reviewer"},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+            max_tokens=512,
+        )
+        raw = resp.content.strip()
+        if raw.startswith("```"):
+            parts = raw.split("```", 2)
+            raw = parts[1] if len(parts) > 1 else raw
+            if raw.lstrip().startswith("json"):
+                raw = raw.lstrip()[4:]
+        data = json.loads(raw.strip())
+        score = int(data.get("score") or base.score)
+        artifact["ceoReviewScore"] = score
+        if data.get("action") == "revision" or score < MIN_PASS_SCORE:
+            note = data.get("note") or f"LLM 评审 {score} 分"
+            role_id = artifact.get("roleId") or "legal"
+            _append_review_note(artifact, note, passed=False)
+            artifact["status"] = "revision"
+            return CeoReviewResult(
+                action="revision",
+                note=note,
+                directive=RoleDirective(
+                    role_id=role_id,
+                    title=f"修订 · {artifact.get('title', kind)}",
+                    kind=kind or role_id,
+                ),
+                score=score,
+            )
+        _append_review_note(artifact, data.get("note") or "LLM 内审通过", passed=True)
+    except (LlmError, json.JSONDecodeError, KeyError, ValueError, TypeError):
+        return base
+    return base

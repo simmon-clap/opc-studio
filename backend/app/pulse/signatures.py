@@ -120,7 +120,17 @@ def build_stream_payload(
         agency_sig["changed"] = True
         exec_sig["changed"] = True
 
-    return {
+    changed_domains: list[str] = []
+    if exec_sig.get("changed"):
+        changed_domains.extend(["roles", "projects", "pulse"])
+    if pres_sig.get("changed"):
+        changed_domains.extend(["projects", "pulse", "ceo"])
+    if inbox_sig.get("changed"):
+        changed_domains.extend(["inbox", "pulse"])
+    if agency_sig.get("changed"):
+        changed_domains.append("inbox")
+
+    payload: dict[str, Any] = {
         "v": 1,
         "at": meta.get("updatedAt"),
         "modules": {
@@ -140,3 +150,8 @@ def build_stream_payload(
             },
         },
     }
+    if changed_domains:
+        from app.services.dashboard_patch import build_dashboard_patch
+
+        payload["patch"] = build_dashboard_patch(dashboard, changed_domains)
+    return payload

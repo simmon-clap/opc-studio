@@ -27,3 +27,9 @@ SECRET_KEY = os.environ.get(
     "OPC_SECRET_KEY",
     "opc-dev-secret-key-change-in-production-32b!",
 )
+
+# Optional: Bridge → POST /channels/inbound 鉴权（留空则不校验）
+CHANNEL_SECRET = os.environ.get("OPC_CHANNEL_SECRET", "")
+
+# 公网暴露时 API Bearer 鉴权（留空则不校验）
+ACCESS_TOKEN = os.environ.get("OPC_ACCESS_TOKEN", "")

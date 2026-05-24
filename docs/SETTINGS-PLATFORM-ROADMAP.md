@@ -3,8 +3,8 @@
 | 项 | 内容 |
 |----|------|
 | 版本 | v1.0 规划 |
-| 状态 | 待实施 |
-| 关联 | [SETTINGS-V2.md](./SETTINGS-V2.md) · [SKILL-HUB.md](./SKILL-HUB.md) · [AGENTS.md](./AGENTS.md) · [CEO-ORCHESTRATION-ROADMAP.md](./CEO-ORCHESTRATION-ROADMAP.md) |
+| 状态 | **Epic 1–2 ✅ · Epic 3–5 ⚠️** · [DEV-STATUS.md §3.3–3.4](./DEV-STATUS.md) |
+| 关联 | [SETTINGS-V2.md](./SETTINGS-V2.md) · [SKILL-HUB.md](./SKILL-HUB.md) · [SETTINGS-IMPLEMENTATION.md](./SETTINGS-IMPLEMENTATION.md) |
 
 > **定位：** OPC Studio 不仅是看板，而是 **Agent 运营平台**。设置页 = 控制面；Skill Hub + Tool/MCP + 多 Model = 执行面。  
 > **原则：** 与周报/经营/工作室一致 — UI 克制、职责清晰、单一数据源、可扩展。
@@ -207,13 +207,14 @@ sequenceDiagram
 
 ## 8. 迭代分期（Epic）
 
-### Epic 0 · 文档与契约（本阶段 ✅）
+### Epic 0 · 文档与契约
 
 - [x] SETTINGS-PLATFORM-ROADMAP.md（本文）
 - [x] SETTINGS-V2.md
 - [x] SKILL-HUB.md
 - [x] CEO-ORCHESTRATION-ROADMAP Phase 6 索引
-- [ ] 更新 PRD §设置、AGENTS §工具层、API.md 索引
+- [x] DEV-STATUS.md · API.md 渠道/设置索引（2026-05-24）
+- [ ] 更新 PRD §设置、AGENTS §工具层（细项交叉引用）
 
 **验收：** 团队对 IA / 数据域 / Epic 依赖无歧义。
 
@@ -236,9 +237,10 @@ sequenceDiagram
 
 **验收：**
 
-- [ ] 设置页仅两块主视图，无长 scroll 堆叠
-- [ ] 用户可新建任意 roleId（如 `brand`），出现在概览/派活候选（dispatchable 可配）
-- [ ] 保存 identity/profile/config 持久化且 Pulse 不闪退
+- [x] 设置页仅两块主视图，无长 scroll 堆叠
+- [x] 用户可新建任意 roleId（如 `brand`），出现在概览/派活候选（dispatchable 可配）
+- [x] 保存 identity/profile/config 持久化且 Pulse 不闪退
+- [x] 分槽 Model URL/Key 独立配置 · 头像上传
 
 **依赖：** 无（仅 dashboard 域扩展）
 
@@ -258,8 +260,9 @@ sequenceDiagram
 
 **验收：**
 
-- [ ] dev task 可 `write_artifact`；未授权 role 调用被拒
-- [ ] agent_run 可查 tool 调用链
+- [x] dev task 可 `write_artifact`；未授权 role 调用被拒
+- [x] agent_run 可查 tool 调用链
+- [ ] Tool 策略 allow/deny chips UI（后端 enforce ✅）
 
 **依赖：** Epic 1（roleConfig 结构）
 
@@ -281,9 +284,10 @@ sequenceDiagram
 
 **验收：**
 
-- [ ] 导入一份外部 SKILL.md → catalog → 绑到自建 `brand` role
-- [ ] 派活带 taskKind 命中正确 skill（规则表）
-- [ ] CEO 收到 Founder 发的 skill 文件 → inbox 提案 → 采纳后 Hub 可见
+- [x] 导入一份外部 SKILL.md → catalog → 绑到自建 `brand` role
+- [x] 派活带 taskKind 命中正确 skill（规则表）
+- [ ] CEO 收到 Founder 发的 skill 文件 → inbox 提案 → 采纳后 Hub 可见（**skill_proposal Modal 缺**）
+- [ ] Skill 详情 drawer · 搜索
 
 **依赖：** Epic 2（skill 声明的 tools 可执行）
 
@@ -303,8 +307,10 @@ sequenceDiagram
 
 **验收：**
 
-- [ ] 自建 brand role + 绑含 `mcp: [image_gen]` 的 skill → run 产生图像 artifact（或 stub）
+- [ ] 自建 brand role + 绑含 `mcp: [image_gen]` 的 skill → run 产生图像 artifact（**MCP/image stub**）
 - [ ] MCP 断开时 inbox 明确报错，不 silent fail
+- [x] MCP 连接 CRUD + health stub API
+- [x] image/video 槽可配置（无 Epic 4 锁定）
 
 **依赖：** Epic 3
 
@@ -321,7 +327,8 @@ sequenceDiagram
 
 **验收：**
 
-- [ ] 单 Task 触发 2~3 Skill 顺序执行，工作室可见中间产物
+- [x] 单 Task 触发 2~3 Skill 顺序执行，工作室可见中间产物（**后端 executor ✅**）
+- [ ] 设置页 Skill 链编辑器 UI
 
 **依赖：** Epic 4
 
@@ -376,4 +383,4 @@ sequenceDiagram
 
 **Epic 1 设置+角色 → Epic 2 Tools → Epic 3 Skill Hub+CEO 安装 → Epic 4 MCP+多模态 → Epic 5 链**
 
-下一实施动作：**已完成 Epic 1–5** — 见 [SETTINGS-IMPLEMENTATION.md](./SETTINGS-IMPLEMENTATION.md)。后续：MCP stdio 真进程、image slot 实调、链编辑器 UI。
+**当前：** Epic 1–2 ✅ · Epic 3–5 后端主体 ⚠️ — 见 [SETTINGS-IMPLEMENTATION.md](./SETTINGS-IMPLEMENTATION.md) · 未完成 [DEV-STATUS §3.3–3.4](./DEV-STATUS.md#33-p1--设置--skill-ui)。

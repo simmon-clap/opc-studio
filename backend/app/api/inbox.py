@@ -9,7 +9,7 @@ from sqlmodel import Session
 from app.api.deps import fail, ok, run_mutation
 from app.db import get_session
 from app.services import orchestrator_hooks
-from app.services.dashboard_store import get_dashboard, mutate
+from app.services.dashboard_store import get_dashboard
 from app.services.state_machines import patch_inbox, resolve_inbox
 from app.presentation.skills import activate_skill, import_skill
 
@@ -54,12 +54,12 @@ def patch_inbox_item(
         return patch_inbox(dashboard, inbox_id, patch)
 
     try:
-        item = run_mutation(session, _apply)
+        item, patch = run_mutation(session, _apply, patch_domains=["inbox", "pulse"])
     except ValueError as exc:
         if str(exc) == "INBOX_NOT_FOUND":
             raise fail("INBOX_NOT_FOUND", "收件项不存在", status=404) from exc
         raise
-    return ok(item)
+    return ok(item, patch=patch)
 
 
 @router.post("/inbox/{inbox_id}/resolve")
@@ -75,30 +75,30 @@ async def resolve_inbox_item(
         return resolve_inbox(dashboard, inbox_id, body.action)
 
     try:
-        item = run_mutation(session, _apply)
+        item, patch = run_mutation(session, _apply, patch_domains=["inbox", "pulse"])
     except ValueError as exc:
         if str(exc) == "INBOX_NOT_FOUND":
             raise fail("INBOX_NOT_FOUND", "收件项不存在", status=404) from exc
         raise
 
     await orchestrator_hooks.on_inbox_resolved(inbox_id, body.action)
-    return ok(item)
+    return ok(item, patch=patch)
 
 
 @router.post("/inbox/{inbox_id}/skill-install")
 def approve_skill_install(inbox_id: str, session: Session = Depends(get_session)):
     """采纳 skill_proposal → import + activate."""
-    skill_id: str | None = None
-    with mutate(session) as dashboard:
+
+    def _apply(dashboard):
         item = next((i for i in dashboard.get("inbox", []) if i.get("id") == inbox_id), None)
         if item is None:
-            raise fail("INBOX_NOT_FOUND", "收件项不存在", status=404)
+            raise ValueError("INBOX_NOT_FOUND")
         if item.get("category") != "skill_proposal":
-            raise fail("INVALID_CATEGORY", "非 Skill 安装提案", status=400)
+            raise ValueError("INVALID_CATEGORY")
         proposed = item.get("proposedSkill") or {}
         markdown = proposed.get("rawMarkdown") or proposed.get("markdown") or ""
         if not markdown.strip():
-            raise fail("MISSING_SKILL_DOC", "提案缺少 SKILL 文档", status=400)
+            raise ValueError("MISSING_SKILL_DOC")
         try:
             skill = import_skill(dashboard, markdown)
             activate_skill(dashboard, skill["id"])
@@ -110,9 +110,24 @@ def approve_skill_install(inbox_id: str, session: Session = Depends(get_session)
                     activate_skill(dashboard, existing_id)
                     skill_id = existing_id
                 else:
-                    raise fail("SKILL_EXISTS", "Skill 已存在", status=409) from exc
+                    raise
             else:
-                raise fail("IMPORT_FAILED", str(exc), status=400) from exc
+                raise
         item["status"] = "resolved"
         item["resolvedAction"] = "approve_install"
-    return ok({"inboxId": inbox_id, "skillId": skill_id})
+        return {"inboxId": inbox_id, "skillId": skill_id}
+
+    try:
+        result, patch = run_mutation(session, _apply, patch_domains=["inbox", "skills", "pulse"])
+    except ValueError as exc:
+        code = str(exc)
+        if code == "INBOX_NOT_FOUND":
+            raise fail("INBOX_NOT_FOUND", "收件项不存在", status=404) from exc
+        if code == "INVALID_CATEGORY":
+            raise fail("INVALID_CATEGORY", "非 Skill 安装提案", status=400) from exc
+        if code == "MISSING_SKILL_DOC":
+            raise fail("MISSING_SKILL_DOC", "提案缺少 SKILL 文档", status=400) from exc
+        if code == "SKILL_EXISTS":
+            raise fail("SKILL_EXISTS", "Skill 已存在", status=409) from exc
+        raise fail("IMPORT_FAILED", str(exc), status=400) from exc
+    return ok(result, patch=patch)

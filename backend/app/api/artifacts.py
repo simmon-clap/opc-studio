@@ -156,9 +156,9 @@ async def put_artifact_content(
             }
             row["status"] = "draft" if row.get("status") == "approved" else q["status"]
 
-    run_mutation(session, _update)
+    _, patch = run_mutation(session, _update, patch_domains=["projects", "pulse", "inbox"])
     await orchestrator_hooks.on_artifact_updated(project_id, artifact_id)
-    return ok({"artifactId": artifact_id, "projectId": project_id})
+    return ok({"artifactId": artifact_id, "projectId": project_id}, patch=patch)
 
 
 @router.post("/projects/{project_id}/artifacts/{artifact_id}/submit-review")
@@ -175,12 +175,12 @@ def submit_artifact_review(
         return result or {"artifactId": artifact_id, "status": art.get("status")}
 
     try:
-        result = run_mutation(session, _apply)
+        result, patch = run_mutation(session, _apply, patch_domains=["projects", "inbox", "pulse"])
     except ValueError as exc:
         if str(exc) == "ARTIFACT_NOT_FOUND":
             raise fail("ARTIFACT_NOT_FOUND", "产出物不存在", status=404) from exc
         raise
-    return ok(result)
+    return ok(result, patch=patch)
 
 
 @router.post("/projects/{project_id}/artifacts/{artifact_id}/approve")
@@ -198,9 +198,9 @@ def approve_artifact_route(
         )
 
     try:
-        result = run_mutation(session, _apply)
+        result, patch = run_mutation(session, _apply, patch_domains=["projects", "inbox", "pulse"])
     except ValueError as exc:
         if str(exc) == "ARTIFACT_NOT_FOUND":
             raise fail("ARTIFACT_NOT_FOUND", "产出物不存在", status=404) from exc
         raise
-    return ok(result)
+    return ok(result, patch=patch)

@@ -2,6 +2,10 @@
 
 > 设置 = **控制面**。系统偏好与编排在一处；角色身份、Profile、模型、Skill 绑定在另一处。UI 与周报/经营同级：克制、分段、可扫读。
 
+| 状态 | **Epic 1–2 ✅ · 细项见 [DEV-STATUS §3.3](./DEV-STATUS.md#33-p1--设置--skill-ui)** |
+|------|------|
+| 关联 | [SETTINGS-PLATFORM-ROADMAP.md](./SETTINGS-PLATFORM-ROADMAP.md) · [SETTINGS-IMPLEMENTATION.md](./SETTINGS-IMPLEMENTATION.md) |
+
 ## 1. 边界
 
 | 区块 | 职责 | 禁止 |
@@ -59,9 +63,9 @@
 │ Markdown 编辑器（同 Founder）              │
 ├─ 模型槽 ───────────────────────────────────┤
 │ 文本对话   [provider] [model] [test]       │
-│ 图像生成   [provider] [model] [test]  🔒*  │
-│ 视频生成   [provider] [model] [test]  🔒*  │
-│ * Epic 4 前禁用态 + hint「需 MCP/执行平台」 │
+│ 图像生成   [provider] [model] [test]       │
+│ 视频生成   [provider] [model] [test]       │
+│ Epic 4：MCP/image **stub**；槽位已可配 Key  │
 ├─ 技能 ─────────────────────────────────────┤
 │ 从 Hub 勾选 enabledSkills[]               │
 │ 可选：绑定 skillChain（Epic 5）            │

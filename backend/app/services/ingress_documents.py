@@ -59,6 +59,9 @@ def ingest_bytes(
         "createdAt": _now_iso(),
     }
     dashboard.setdefault("attachments", []).insert(0, record)
+    from app.services.skill_attachment_proposal import maybe_propose_skill_from_attachment
+
+    maybe_propose_skill_from_attachment(dashboard, record)
     return record
 
 

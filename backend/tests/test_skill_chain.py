@@ -48,6 +48,24 @@ def test_chain_route_first_step(client):
     assert skill["id"] == "nda_review_v2"
 
 
+def test_resolve_skill_chain_by_route(client):
+    from app.presentation.skills import resolve_skill_chain
+
+    dash = client.get("/api/v1/dashboard").json()["data"]
+    dash.setdefault("meta", {})["chainRoutes"] = {"legal.nda": "chain_test"}
+    client.post(
+        "/api/v1/skill-chains",
+        json={
+            "id": "chain_test",
+            "name": "Test",
+            "steps": [{"skillId": "nda_review_v2", "onFail": "halt"}],
+        },
+    )
+    dash = client.get("/api/v1/dashboard").json()["data"]
+    dash.setdefault("meta", {})["chainRoutes"] = {"legal.nda": "chain_test"}
+    assert resolve_skill_chain(dash, task_kind="legal.nda") == "chain_test"
+
+
 def test_execute_skill_chain_stub(client):
     client.post(
         "/api/v1/skill-chains",

@@ -24,6 +24,7 @@ class McpConnectionCreate(BaseModel):
     label: str
     transport: str = "stdio"
     command: list[str] = Field(default_factory=list)
+    env: dict[str, str] | None = None
     capabilities: list[str] = Field(default_factory=lambda: ["image"])
     allowedRoles: list[str] = Field(default_factory=list)
     maxConcurrent: int = 2
@@ -56,10 +57,9 @@ def create_mcp_connection(body: McpConnectionCreate, session: Session = Depends(
 @router.post("/mcp/connections/{connection_id}/health")
 async def check_mcp_health(connection_id: str, session: Session = Depends(get_session)):
     dashboard = get_dashboard(session)
-    conn = get_connection(dashboard, connection_id)
-    if conn is None:
-        raise fail("MCP_NOT_FOUND", "连接不存在", status=404)
+    sync_mcp_connections(dashboard)
     bridge = get_mcp_bridge()
+    bridge.configure(dashboard.get("mcpConnections") or [])
     sessions = bridge.mount([connection_id])
     result = await bridge.call_tool(connection_id, "health_check", {})
     bridge.teardown()
@@ -69,4 +69,17 @@ async def check_mcp_health(connection_id: str, session: Session = Depends(get_se
         if target:
             target["health"] = health
             target["lastHealthAt"] = datetime.now(timezone.utc).isoformat()
+        if health == "error":
+            dash.setdefault("inbox", []).insert(
+                0,
+                {
+                    "id": f"inbox-mcp-{connection_id}",
+                    "category": "reminder",
+                    "title": f"MCP 连接异常 · {connection_id}",
+                    "preview": str(result.get("error") or result)[:200],
+                    "status": "active",
+                    "read": False,
+                    "at": datetime.now(timezone.utc).isoformat(),
+                },
+            )
     return ok({"connectionId": connection_id, "health": health, "detail": result})

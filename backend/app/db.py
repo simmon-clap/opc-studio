@@ -38,9 +38,37 @@ def get_engine():
     return _engine
 
 
+def _migrate_role_secrets(engine) -> None:
+    with engine.connect() as conn:
+        cols = {
+            row[1]
+            for row in conn.exec_driver_sql("PRAGMA table_info(role_secrets)").fetchall()
+        }
+        if "slot_credentials_json" not in cols:
+            conn.exec_driver_sql(
+                "ALTER TABLE role_secrets ADD COLUMN slot_credentials_json TEXT"
+            )
+            conn.commit()
+
+
+def _migrate_agent_runs(engine) -> None:
+    with engine.connect() as conn:
+        cols = {
+            row[1]
+            for row in conn.exec_driver_sql("PRAGMA table_info(agent_runs)").fetchall()
+        }
+        if "skill_id" not in cols:
+            conn.exec_driver_sql("ALTER TABLE agent_runs ADD COLUMN skill_id TEXT")
+        if "tool_calls_json" not in cols:
+            conn.exec_driver_sql("ALTER TABLE agent_runs ADD COLUMN tool_calls_json TEXT")
+        conn.commit()
+
+
 def init_db() -> None:
     engine = get_engine()
     SQLModel.metadata.create_all(engine)
+    _migrate_role_secrets(engine)
+    _migrate_agent_runs(engine)
 
 
 def get_session() -> Generator[Session, None, None]:

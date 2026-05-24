@@ -79,8 +79,8 @@ def patch_finance_period(body: FinancePeriodPatch, session: Session = Depends(ge
         sync_finance(dashboard)
         return {"finance": finance_summary_payload(dashboard)}
 
-    result = run_mutation(session, _apply)
-    return ok(result)
+    result, patch = run_mutation(session, _apply, patch_domains=["finance", "costs", "pulse"])
+    return ok(result, patch=patch)
 
 
 @router.patch("/finance/projects/{project_id}")
@@ -111,12 +111,12 @@ def patch_finance_project(
         return {"project": get_finance_project(dashboard, project_id)}
 
     try:
-        result = run_mutation(session, _apply)
+        result, patch = run_mutation(session, _apply, patch_domains=["finance", "costs", "pulse"])
     except ValueError as exc:
         if str(exc) == "FINANCE_PROJECT_NOT_FOUND":
             raise fail("FINANCE_PROJECT_NOT_FOUND", "项目财务数据不存在", status=404) from exc
         raise
-    return ok(result)
+    return ok(result, patch=patch)
 
 
 @router.get("/finance/export")

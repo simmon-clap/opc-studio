@@ -24,6 +24,7 @@ DEFAULT_RUNTIME_SETTINGS: dict[str, Any] = {
         "projectIdleHours": 48,
         "pauseWhileCeoThreadPending": True,
         "ceoDeliberateUseLlm": False,
+        "roleDeliberateUseLlm": False,
     },
     "ceoAutoDispatch": {
         "enabled": False,

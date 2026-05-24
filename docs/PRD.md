@@ -3,9 +3,9 @@
 | 项 | 内容 |
 |----|------|
 | 版本 | v0.3 已确认 · Mock 看板全功能 |
-| 状态 | Phase 1 完成 · **Phase 2 后端设计草案** |
+| 状态 | Phase 1 ✅ · **Phase 2 控制面 ✅** · 渠道/执行面 ⚠️ · 详见 [DEV-STATUS.md](./DEV-STATUS.md) |
 | 读者 | Founder（你）、后续开发 |
-| 关联 | [业务全景 HTML](../architecture.html) · [后端设计 BACKEND.md](./BACKEND.md) |
+| 关联 | [业务全景 HTML](../architecture.html) · [后端设计 BACKEND.md](./BACKEND.md) · [DEV-STATUS.md](./DEV-STATUS.md) |
 
 ---
 
@@ -35,15 +35,15 @@
 - [x] 项目工作室、收件箱、经营、客户、周报、结项流程可演示
 - [x] 主观感受：像在带团队，不像看数据库表
 
-### 1.4 Phase 2 目标（下一步）
+### 1.4 Phase 2 目标
 
-> **FastAPI + SQLite + 本地项目目录**，前端改读 API；详见 [BACKEND.md](./BACKEND.md)。
+> **FastAPI + SQLite + 本地项目目录**，前端改读 API；详见 [BACKEND.md](./BACKEND.md) · 未完成项 [DEV-STATUS.md §3](./DEV-STATUS.md#3-未完成--部分完成开发-backlog)。
 
-- [ ] 按项目本地存档产出物（文件系统 + DB 索引）
-- [ ] 飞书 / 企业微信对话接入 CEO 中枢
-- [ ] 五角色独立 API Base URL + API Key 配置
-- [ ] Token 成本自动记账 → 项目盈亏
-- [ ] Docker 单容器部署 + 数据卷备份
+- [x] 按项目本地存档产出物（文件系统 + DB 索引）
+- [ ] 飞书 / 企业微信对话接入 CEO 中枢（inbound 骨架 ✅；飞书 Webhook **501** · ClawBot Bridge 未做）
+- [x] 五角色独立 API Base URL + API Key 配置（含分槽 Key · 头像上传）
+- [x] Token 成本自动记账 → 项目盈亏（`agent_runs` + 经营 v2）
+- [ ] Docker 单容器部署 + 数据卷备份（**明确不做必选**；已有 `start.sh` + systemd + backup 脚本）
 
 ---
 

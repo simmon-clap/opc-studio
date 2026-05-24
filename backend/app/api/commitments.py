@@ -48,9 +48,9 @@ def patch_commitment_route(
         return item
 
     try:
-        result = run_mutation(session, _apply)
+        result, patch = run_mutation(session, _apply, patch_domains=["inbox", "pulse", "ceo"])
     except ValueError as exc:
         if str(exc) == "COMMITMENT_NOT_FOUND":
             raise fail("COMMITMENT_NOT_FOUND", "承诺事项不存在", status=404) from exc
         raise
-    return ok(result)
+    return ok(result, patch=patch)

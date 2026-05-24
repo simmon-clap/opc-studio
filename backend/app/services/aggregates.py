@@ -233,9 +233,26 @@ from app.presentation.derived import recompute_presentation
 from app.presentation.project_progress import recompute_projects_progress
 
 
+from app.services.budget_alerts import maybe_escalate_budget
+from app.presentation.finance import sync_finance
+
+
+def recompute_finance_extras(dashboard: dict[str, Any]) -> None:
+    sync_finance(dashboard)
+    maybe_escalate_budget(dashboard)
+    costs = dashboard.setdefault("costs", {})
+    by_cap: dict[str, float] = {"text": 0.0, "image": 0.0, "video": 0.0, "code": 0.0}
+    for run in dashboard.get("agentRuns") or []:
+        cap = run.get("capability") or "text"
+        cost = float(run.get("costCny") or run.get("cost_cny") or 0)
+        by_cap[cap] = by_cap.get(cap, 0.0) + cost
+    costs["byCapability"] = [{"capability": k, "cost": round(v, 2)} for k, v in by_cap.items() if v > 0]
+
+
 def recompute_all(dashboard: dict[str, Any]) -> None:
     recompute_projects_progress(dashboard)
     recompute_pulse(dashboard)
     recompute_stats(dashboard)
     recompute_role_live_state(dashboard)
     recompute_presentation(dashboard)
+    recompute_finance_extras(dashboard)

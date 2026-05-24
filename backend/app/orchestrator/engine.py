@@ -16,7 +16,7 @@ from app.models.deliberation_sessions import DeliberationSession
 from app.models.handoffs import Handoff
 from app.models.orchestration_events import OrchestrationEvent
 from app.services.dispatch_feed import log_accept, log_complete, log_task_failed, set_orchestration_active
-from app.orchestrator.ceo_review import review_artifact
+from app.orchestrator.ceo_review import review_artifact_async
 from app.orchestrator.ceo_turn import apply_turn_side_effects, run_ceo_turn
 from app.orchestrator.supervisor import (
     link_open_commitments_to_task,
@@ -27,6 +27,7 @@ from app.orchestrator.supervisor import (
 from app.orchestrator.dispatch_planner import DispatchPlan, plan_dispatch
 from app.orchestrator.directives import RoleDirective
 from app.orchestrator import deliberation, dispatcher, transitions
+from app.presentation.skills import resolve_skill_chain
 from app.runners.base import RunContext, RunResult
 from app.runners.registry import build_task_prompt, run_role
 from app.services import aggregates
@@ -385,12 +386,18 @@ class Orchestrator:
 
         for directive in directives:
             task_title = f"{client_name} · {directive.title}"
+            chain_id = resolve_skill_chain(
+                dashboard,
+                task_kind=directive.kind,
+                deliverable_kind=directive.kind,
+            )
             task = dispatcher.dispatch_task(
                 dashboard,
                 role_id=directive.role_id,
                 project_id=project_id,
                 title=task_title,
                 deliverable_kind=directive.kind,
+                skill_chain_id=chain_id,
             )
             task["briefContext"] = brief_text
             link_open_commitments_to_task(
@@ -457,10 +464,19 @@ class Orchestrator:
         if not body:
             body = "收到。"
         thread = dashboard.get("ceoThread", [])
+        founder_ctx: dict[str, Any] | None = None
+        for msg in reversed(thread):
+            if msg.get("direction") == "founder_to_ceo":
+                founder_ctx = msg
+                break
         for msg in reversed(thread):
             if msg.get("direction") == "ceo_to_founder" and msg.get("type") == "ack":
                 msg["type"] = msg_type
                 msg["text"] = body
+                if founder_ctx:
+                    msg["channel"] = founder_ctx.get("channel", "web")
+                    if founder_ctx.get("senderId"):
+                        msg["recipientId"] = founder_ctx["senderId"]
                 if content:
                     msg["content"] = content
                 msg["at"] = datetime.now(timezone.utc).astimezone().isoformat(
@@ -476,10 +492,16 @@ class Orchestrator:
         msg_type: str = "analysis",
         content: dict[str, Any] | None = None,
     ) -> None:
+        channel = "web"
+        thread = dashboard.get("ceoThread", [])
+        for msg in reversed(thread):
+            if msg.get("direction") == "founder_to_ceo":
+                channel = msg.get("channel", "web")
+                break
         record: dict[str, Any] = {
             "id": f"thread-{uuid4().hex[:8]}",
             "direction": "ceo_to_founder",
-            "channel": "web",
+            "channel": channel,
             "type": msg_type,
             "text": text,
             "at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
@@ -777,7 +799,7 @@ class Orchestrator:
                 write_artifact_file(ctx.project_id, result.artifact_id, content)
                 saved_art = artifact
 
-            review = review_artifact(
+            review = await review_artifact_async(
                 session, dashboard, saved_art, project_id=ctx.project_id
             )
             depth = int(task.get("_revisionDepth") or 0)

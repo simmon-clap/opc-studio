@@ -47,7 +47,7 @@ def test_create_registry_role(client):
     assert "brand" in dash["roleProfiles"]
     cfg = next(c for c in dash["roleConfig"] if c["roleId"] == "brand")
     assert cfg["models"]["text"]["enabled"] is True
-    assert cfg["models"]["image"]["enabled"] is False
+    assert cfg["models"]["image"]["enabled"] is True
 
 
 def test_create_duplicate_role_rejected(client):
@@ -150,3 +150,34 @@ def test_presentation_roles_includes_new_role(client):
     dash = client.get("/api/v1/dashboard").json()["data"]
     pres = dash["presentation"]["roles"]
     assert any(r["id"] == "brand" for r in pres)
+
+
+def test_role_config_per_slot_credentials(client):
+    client.post(
+        "/api/v1/roles/registry",
+        json={"id": "brand", "name": "苏见", "capabilities": ["text", "image"]},
+    )
+    res = client.put(
+        "/api/v1/roles/config/brand",
+        json={
+            "models": {
+                "text": {
+                    "model": "gpt-4o-mini",
+                    "apiProvider": "OpenRouter",
+                    "apiBaseUrl": "https://openrouter.ai/api/v1",
+                    "apiKey": "sk-text-key",
+                },
+                "image": {
+                    "model": "dall-e-3",
+                    "apiProvider": "OpenAI",
+                    "apiBaseUrl": "https://api.openai.com/v1",
+                    "apiKey": "sk-image-key",
+                },
+            },
+        },
+    )
+    assert res.status_code == 200
+    cfg = res.json()["data"]
+    assert cfg["models"]["text"]["apiKeyConfigured"] is True
+    assert cfg["models"]["image"]["apiKeyConfigured"] is True
+    assert cfg["models"]["image"]["apiBaseUrl"] == "https://api.openai.com/v1"

@@ -34,8 +34,12 @@ from app.api import (
     tools,
     agent_runs,
     weekly,
+    channels,
+    events,
+    meta,
 )
 from app.config import APP_VERSION, PROJECT_ROOT
+from app.security.access_middleware import AccessTokenMiddleware
 from app.db import init_db, session_scope
 from app.pulse.coordinator import get_pulse_coordinator, start_pulse_loop
 from app.pulse.modules.reconcile import tick_reconcile
@@ -62,6 +66,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="OPC Studio API", version=APP_VERSION, lifespan=lifespan)
 
+app.add_middleware(AccessTokenMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -108,6 +113,9 @@ for module in (
     orchestration,
     pulse,
     runtime,
+    channels,
+    events,
+    meta,
 ):
     app.include_router(module.router, prefix="/api/v1")
 

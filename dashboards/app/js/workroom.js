@@ -347,12 +347,17 @@ function renderNavFold(fold) {
   if (fold.type === "deliberation") {
     const d = fold.data || {};
     const turns = (d.turns || []).map((t) => `
-      <div class="delib-turn compact">
-        <span class="delib-author">${ROLE_SHORT?.[t.author] || t.author}</span>
+      <div class="delib-turn compact ${t.author === "founder" ? "founder" : ""}">
+        <span class="delib-author">${t.author === "founder" ? "Founder" : (ROLE_SHORT?.[t.author] || t.author)}</span>
         <p>${escapeHtml(t.content || "")}</p>
       </div>`).join("");
+    const founderInput = d.status === "open" ? `
+      <div class="delib-founder-note">
+        <textarea id="delib-founder-note" class="founder-doc-editor" rows="2" placeholder="插话 / 补充意见…"></textarea>
+        <button type="button" class="btn-secondary btn-sm" onclick="submitDelibFounderNote('${escapeAttr(d.id)}')">发送</button>
+      </div>` : "";
     return `
-      <details class="nav-fold" data-fold-key="${escapeAttr(foldKey)}">
+      <details class="nav-fold" data-fold-key="${escapeAttr(foldKey)}" open>
         <summary class="nav-fold-summary">
           <span class="nav-fold-dot">●</span>
           <span class="nav-fold-label">${escapeHtml(fold.label)}</span>
@@ -361,6 +366,7 @@ function renderNavFold(fold) {
         <div class="nav-fold-body">
           <div class="delib-agenda compact">${(d.agenda || []).map((a) => `<span class="chip">${escapeHtml(a)}</span>`).join("")}</div>
           <div class="delib-turns">${turns}</div>
+          ${founderInput}
         </div>
       </details>`;
   }
@@ -617,6 +623,27 @@ async function reloadArtifactDiff() {
   } catch (_) {
     workroomDiffLines = null;
     workroomDiffMode = false;
+  }
+}
+
+async function submitDelibFounderNote(sessionId) {
+  if (!workroomProjectId || !sessionId) return;
+  const ta = document.getElementById("delib-founder-note");
+  const text = ta?.value?.trim();
+  if (!text) return;
+  try {
+    await apiPost(`/projects/${workroomProjectId}/deliberation/${sessionId}/founder-note`, { text });
+    ta.value = "";
+    await loadWorkroomData(workroomProjectId);
+    const ui = captureWorkroomUiState();
+    document.getElementById("workroom-nav").innerHTML = renderWorkroomNavGrouped(
+      workroomProjectId,
+      workroomArtifactId,
+      workroomData
+    );
+    restoreWorkroomUiState(ui);
+  } catch (e) {
+    alert(`发送失败：${e.message}`);
   }
 }
 
@@ -964,6 +991,7 @@ function wrapArtifactBody(html, art) {
   return `<div class="art-viewer-editable" onclick="onArtifactContentClick(event)" title="点击编辑">${html}</div>`;
 }
 
+window.submitDelibFounderNote = submitDelibFounderNote;
 window.setProjectPriority = setProjectPriority;
 window.saveBriefFromEditor = saveBriefFromEditor;
 window.toggleBriefEditor = toggleBriefEditor;

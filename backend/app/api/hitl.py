@@ -34,7 +34,7 @@ async def approve_hitl_route(hitl_id: str, session: Session = Depends(get_sessio
         return approve_hitl(dashboard, hitl_id)
 
     try:
-        result = run_mutation(session, _apply)
+        result, patch = run_mutation(session, _apply, patch_domains=["inbox", "pulse", "projects", "roles"])
     except ValueError as exc:
         code = str(exc)
         if code == "HITL_NOT_FOUND":
@@ -44,7 +44,7 @@ async def approve_hitl_route(hitl_id: str, session: Session = Depends(get_sessio
         raise
 
     await orchestrator_hooks.on_hitl_approved(hitl_id, result.get("projectId"))
-    return ok(result)
+    return ok(result, patch=patch)
 
 
 @router.post("/hitl/{hitl_id}/reject")
@@ -59,7 +59,7 @@ async def reject_hitl_route(
         return reject_hitl(dashboard, hitl_id, note)
 
     try:
-        result = run_mutation(session, _apply)
+        result, patch = run_mutation(session, _apply, patch_domains=["inbox", "pulse", "projects", "roles"])
     except ValueError as exc:
         code = str(exc)
         if code == "HITL_NOT_FOUND":
@@ -69,7 +69,7 @@ async def reject_hitl_route(
         raise
 
     await orchestrator_hooks.on_hitl_rejected(hitl_id, result.get("projectId"), result.get("note", ""))
-    return ok(result)
+    return ok(result, patch=patch)
 
 
 @router.get("/reject-history")

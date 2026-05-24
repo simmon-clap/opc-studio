@@ -46,11 +46,13 @@ async def pulse_stream(session: Session = Depends(get_session)):
     async def event_generator():
         dashboard = get_dashboard(session)
         prev_sig = ""
+        prev_modules: dict[str, Any] | None = None
         queue = coordinator.subscribe_stream()
         try:
             while True:
                 dashboard = get_dashboard(session)
-                payload = build_stream_payload(session, dashboard)
+                payload = build_stream_payload(session, dashboard, prev_modules=prev_modules)
+                prev_modules = payload.get("modules")
                 sig = json.dumps(payload.get("modules") or {}, sort_keys=True)
                 if sig != prev_sig:
                     prev_sig = sig

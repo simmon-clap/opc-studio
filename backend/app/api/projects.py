@@ -61,7 +61,7 @@ def patch_project_route(
         )
 
     try:
-        result = run_mutation(session, _apply)
+        result, patch = run_mutation(session, _apply, patch_domains=["projects", "pulse", "inbox"])
     except ValueError as exc:
         code = str(exc)
         if code == "PROJECT_NOT_FOUND":
@@ -69,7 +69,7 @@ def patch_project_route(
         if code == "INVALID_PRIORITY":
             raise fail("INVALID_PRIORITY", "优先级无效", status=400)
         raise fail("PATCH_FAILED", code, status=400)
-    return ok(result)
+    return ok(result, patch=patch)
 
 
 @router.patch("/projects/{project_id}/brief")
@@ -86,12 +86,12 @@ def patch_project_brief_route(
         return patch_project_brief(dashboard, project_id, delta)
 
     try:
-        result = run_mutation(session, _apply)
+        result, patch = run_mutation(session, _apply, patch_domains=["projects", "pulse"])
     except ValueError as exc:
         if str(exc) == "PROJECT_NOT_FOUND":
             raise fail("PROJECT_NOT_FOUND", "项目不存在", status=404)
         raise fail("PATCH_FAILED", str(exc), status=400)
-    return ok(result)
+    return ok(result, patch=patch)
 
 
 @router.patch("/projects/{project_id}/closure/checklist/{item_id}")
@@ -107,13 +107,13 @@ def patch_closure_item(
         )
 
     try:
-        result = run_mutation(session, _apply)
+        result, patch = run_mutation(session, _apply, patch_domains=["projects", "pulse"])
     except ValueError as exc:
         code = str(exc)
         if code == "CLOSURE_NOT_FOUND":
             raise fail("CLOSURE_NOT_FOUND", "结项清单不存在", status=404)
         raise fail("CLOSURE_ITEM_NOT_FOUND", "结项项不存在", status=404)
-    return ok(result)
+    return ok(result, patch=patch)
 
 
 @router.get("/projects")

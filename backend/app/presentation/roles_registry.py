@@ -7,6 +7,8 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
+from app.services.avatar_storage import resolve_avatar_url
+
 ROLE_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_-]{1,24}$")
 CAPABILITIES = frozenset({"text", "image", "video", "code"})
 
@@ -89,8 +91,18 @@ def default_model_slots() -> dict[str, Any]:
             "apiBaseUrl": "https://openrouter.ai/api/v1",
             "enabled": True,
         },
-        "image": {"model": "", "apiProvider": "", "enabled": False},
-        "video": {"model": "", "apiProvider": "", "enabled": False},
+        "image": {
+            "model": "",
+            "apiProvider": "OpenRouter",
+            "apiBaseUrl": "https://openrouter.ai/api/v1",
+            "enabled": False,
+        },
+        "video": {
+            "model": "",
+            "apiProvider": "OpenRouter",
+            "apiBaseUrl": "https://openrouter.ai/api/v1",
+            "enabled": False,
+        },
     }
 
 
@@ -125,14 +137,40 @@ def bootstrap_role_registry_from_defaults(dashboard: dict[str, Any]) -> None:
     ]
 
 
+def _overview_key(overview: dict[str, Any] | None) -> str:
+    if not overview:
+        return ""
+    try:
+        return f"{int(overview.get('x', 0))},{int(overview.get('y', 0))}"
+    except (TypeError, ValueError):
+        return ""
+
+
 def _next_overview(registry_roles: list[dict[str, Any]]) -> dict[str, int]:
-    used = {tuple(r.get("overview", {}).items()) for r in registry_roles if r.get("overview")}
+    used = {_overview_key(r.get("overview")) for r in registry_roles if r.get("overview")}
+    used.discard("")
     for slot in DEFAULT_OVERVIEW_GRID:
-        key = (("x", slot["x"]), ("y", slot["y"]))
+        key = _overview_key(slot)
         if key not in used:
             return dict(slot)
     n = len(registry_roles)
     return {"x": 10 + (n * 11) % 80, "y": 20 + (n * 13) % 60}
+
+
+def _rebalance_overview_positions(entries: list[dict[str, Any]]) -> None:
+    """Ensure no two active roles share the same overview slot."""
+    used: set[str] = set()
+    for entry in entries:
+        if entry.get("status") == "disabled":
+            continue
+        key = _overview_key(entry.get("overview"))
+        if key and key not in used:
+            used.add(key)
+            continue
+        entry["overview"] = _next_overview(
+            [e for e in entries if e.get("id") != entry.get("id")]
+        )
+        used.add(_overview_key(entry["overview"]))
 
 
 def _default_live_role(entry: dict[str, Any]) -> dict[str, Any]:
@@ -150,10 +188,14 @@ def _default_live_role(entry: dict[str, Any]) -> dict[str, Any]:
 
 
 def _default_role_config(entry: dict[str, Any]) -> dict[str, Any]:
+    models = default_model_slots()
+    for cap in entry.get("capabilities") or ["text"]:
+        if cap in models:
+            models[cap]["enabled"] = True
     return {
         "roleId": entry["id"],
         "monthlyBudget": 500,
-        "models": default_model_slots(),
+        "models": models,
         "enabledSkills": [],
         "toolPolicy": {"allow": [], "deny": []},
         "tools": [],
@@ -179,11 +221,9 @@ def sync_role_registry(dashboard: dict[str, Any]) -> None:
         rid = entry.get("id")
         if not rid:
             continue
-        live = live_by_id.get(rid) or _default_live_role(entry)
-        if rid not in live_by_id:
-            roles_out.append(live)
-        else:
-            roles_out.append(live_by_id[rid])
+        live = dict(live_by_id.get(rid) or _default_live_role(entry))
+        live["avatar"] = resolve_avatar_url(rid, live.get("avatar"))
+        roles_out.append(live)
 
         cfg = cfg_by_id.get(rid) or _default_role_config(entry)
         migrate_role_config_models(cfg)
@@ -197,6 +237,7 @@ def sync_role_registry(dashboard: dict[str, Any]) -> None:
     dashboard["roles"] = roles_out
     dashboard["roleConfig"] = configs_out
     dashboard["roleProfiles"] = profiles
+    _rebalance_overview_positions(entries)
 
     # Drop orphan configs/profiles for removed registry entries
     valid = set(by_id)

@@ -39,6 +39,7 @@ const INBOX_CAT = {
   digest: "摘要",
   profile_suggestion: "偏好",
   proposal: "建议",
+  skill_proposal: "Skill",
   handoff: "交接",
 };
 
@@ -77,6 +78,9 @@ function applyBrandMeta() {
 async function init() {
   probeApiCapabilities();
   data = await loadDashboard();
+  if (typeof Presentation !== "undefined") {
+    Presentation.syncRoleLayout(data);
+  }
   lastSyncAt = Date.now();
   applyBrandMeta();
   renderAll();
@@ -87,7 +91,48 @@ async function init() {
   bindOverviewResize();
   ensurePulseStream();
   startLiveSync();
+  maybeShowStubBanner();
+  maybeShowKeyWizard();
 }
+
+function maybeShowStubBanner() {
+  const configs = data?.roleConfig || [];
+  const dispatchable = (data?.presentation?.roles || []).filter((r) => r.dispatchable !== false);
+  const anyKey = configs.some((c) => c.apiKeyConfigured);
+  if (anyKey) return;
+  const id = "stub-mode-banner";
+  if (document.getElementById(id)) return;
+  const el = document.createElement("div");
+  el.id = id;
+  el.className = "stub-mode-banner";
+  el.innerHTML = `<strong>Stub 模式</strong> · 尚未配置 LLM API Key，角色将使用确定性 Stub 输出。<button type="button" class="wf-link" onclick="goToView('settings')">去设置 Key</button>`;
+  document.body.prepend(el);
+}
+
+function maybeShowKeyWizard() {
+  if (localStorage.getItem("opc-key-wizard-dismissed")) return;
+  const configs = data?.roleConfig || [];
+  if (configs.some((c) => c.apiKeyConfigured)) return;
+  const id = "key-wizard-banner";
+  if (document.getElementById(id)) return;
+  const el = document.createElement("div");
+  el.id = id;
+  el.className = "key-wizard-banner";
+  el.innerHTML = `
+    <div><strong>首次启动？</strong> 在设置 → 角色配置中为 CEO 等角色填入 API Key 即可启用 Live LLM。</div>
+    <div class="key-wizard-actions">
+      <button type="button" class="btn-primary btn-sm" onclick="goToView('settings');dismissKeyWizard()">打开设置</button>
+      <button type="button" class="btn-secondary btn-sm" onclick="dismissKeyWizard()">稍后</button>
+    </div>`;
+  document.body.prepend(el);
+}
+
+function dismissKeyWizard() {
+  localStorage.setItem("opc-key-wizard-dismissed", "1");
+  document.getElementById("key-wizard-banner")?.remove();
+}
+
+window.dismissKeyWizard = dismissKeyWizard;
 
 function ensurePulseStream() {
   if (pulseSSE || typeof EventSource === "undefined") return;
@@ -115,6 +160,42 @@ async function handlePulseStream(payload) {
   const prev = lastPulseModules || {};
   lastPulseModules = modules;
 
+  if (payload?.patch && applyDashboardPatch(payload.patch)) {
+    lastSyncAt = Date.now();
+    applyBrandMeta();
+    const weeklyInteractive = typeof isWeeklyUiInteractive === "function" && isWeeklyUiInteractive();
+    const financeInteractive = typeof isFinanceUiInteractive === "function" && isFinanceUiInteractive();
+    const settingsInteractive = typeof isSettingsUiInteractive === "function" && isSettingsUiInteractive();
+    const settingsView = typeof isSettingsViewActive === "function" && isSettingsViewActive();
+    const view = getActiveViewId();
+    if (weeklyInteractive || financeInteractive || settingsInteractive || settingsView) {
+      updateBadges();
+    } else if (modules.presentation?.changed && view === "overview") {
+      renderOverview();
+    } else if (modules.presentation?.changed || modules.inbox?.changed) {
+      renderActiveView();
+    } else if (modules.execution?.changed) {
+      updateBadges();
+      if (view === "projects") renderProjects();
+    } else {
+      updateBadges();
+    }
+    if (openRoleId && !document.getElementById("modal-backdrop").hidden) {
+      renderRoleModal(openRoleId);
+    }
+    if (document.querySelector(".ceo-office")) {
+      updateCeoThreadPane();
+    }
+    if (workroomProjectId && !document.getElementById("sheet-backdrop").hidden) {
+      if (typeof isWorkroomUiInteractive === "function" && isWorkroomUiInteractive()) {
+        if (typeof loadWorkroomData === "function") await loadWorkroomData(workroomProjectId);
+      } else {
+        await syncWorkroomAfterRefresh();
+      }
+    }
+    return;
+  }
+
   const needPresentation =
     modules.presentation?.changed ||
     modules.presentation?.sig !== prev.presentation?.sig ||
@@ -132,8 +213,10 @@ async function handlePulseStream(payload) {
 
   const weeklyInteractive = typeof isWeeklyUiInteractive === "function" && isWeeklyUiInteractive();
   const financeInteractive = typeof isFinanceUiInteractive === "function" && isFinanceUiInteractive();
+  const settingsInteractive = typeof isSettingsUiInteractive === "function" && isSettingsUiInteractive();
+  const settingsView = typeof isSettingsViewActive === "function" && isSettingsViewActive();
   const view = getActiveViewId();
-  if (weeklyInteractive || financeInteractive) {
+  if (weeklyInteractive || financeInteractive || settingsInteractive || settingsView) {
     updateBadges();
   } else if (needPresentation && view === "overview") {
     renderOverview();
@@ -208,7 +291,8 @@ async function tickLiveSync() {
   const weeklyInteractive = typeof isWeeklyUiInteractive === "function" && isWeeklyUiInteractive();
   const financeInteractive = typeof isFinanceUiInteractive === "function" && isFinanceUiInteractive();
   const settingsInteractive = typeof isSettingsUiInteractive === "function" && isSettingsUiInteractive();
-  if (weeklyInteractive || financeInteractive || settingsInteractive) {
+  const settingsView = typeof isSettingsViewActive === "function" && isSettingsViewActive();
+  if (weeklyInteractive || financeInteractive || settingsInteractive || settingsView) {
       updateBadges();
     } else {
       renderActiveView();
@@ -261,6 +345,7 @@ function renderActiveView() {
     default:
       renderOverview();
   }
+  updateFabVisibility();
 }
 
 function renderAll() {
@@ -376,11 +461,30 @@ function closeSheet() {
 function getProject(id) { return data.projects.find((p) => p.id === id); }
 function getRole(id) { return data.roles.find((r) => r.id === id); }
 
-const KNOWN_AVATAR_ROLES = new Set(["ceo", "product", "legal", "dev", "ops"]);
 function avatarSrc(roleId) {
-  const id = KNOWN_AVATAR_ROLES.has(roleId) ? roleId : "ceo";
-  return `../../assets/avatars/${id}.png`;
+  const role = typeof getRole === "function" ? getRole(roleId) : null;
+  const av = role?.avatar;
+  if (av && (av.startsWith("http://") || av.startsWith("https://") || av.startsWith("/"))) return av;
+  return `/assets/avatars/${roleId}.png`;
 }
+
+const AVATAR_FALLBACK = "/assets/brand/logo.png";
+function onAvatarError(img) {
+  if (!img || img.dataset.fallbackApplied) return;
+  img.dataset.fallbackApplied = "1";
+  img.src = AVATAR_FALLBACK;
+}
+window.onAvatarError = onAvatarError;
+document.addEventListener(
+  "error",
+  (e) => {
+    const t = e.target;
+    if (t?.tagName === "IMG" && /\/assets\/(avatars|uploads\/avatars)\//.test(String(t.src || ""))) {
+      onAvatarError(t);
+    }
+  },
+  true,
+);
 function avatarLabel(roleId) {
   if (roleId === "founder") return "Founder";
   return getRole(roleId)?.name || roleId;
@@ -629,7 +733,7 @@ function renderDispatchBubbles() {
         style="left:${anchor.left}%;top:${anchor.top}%;opacity:${opacity.toFixed(2)}"
         title="${escapeAttr(item.text)}">
         <div class="bubble-speaker">
-          <img src="../../assets/avatars/${item.speakerRole}.png" alt=""/>
+          <img src="${avatarSrc(item.speakerRole)}" alt=""/>
           <span>${speaker?.name || ROLE_SHORT[item.speakerRole] || item.speakerRole}</span>
         </div>
         <div class="bubble-text">${escapeAttr(item.text)}</div>
@@ -672,27 +776,67 @@ function legacyVisibleDispatchFeed() {
     .slice(0, DISPATCH_MAX_VISIBLE);
 }
 
+function roleOverviewPos(roleId) {
+  return ROLE_POS[roleId] || { x: 50, y: 50 };
+}
+
+function getOverviewRoles() {
+  const pres = data?.presentation?.roles || [];
+  if (!pres.length) return data?.roles || [];
+  return pres.map((pr) => {
+    const live = getRole(pr.id) || {};
+    return {
+      ...live,
+      id: pr.id,
+      name: live.name || pr.name || pr.short || pr.id,
+      workStatus: live.workStatus || pr.workStatus || "idle",
+      focus: live.focus,
+    };
+  });
+}
+
 function renderOverview() {
   renderPulse();
   renderOrchestrationBanner();
-  document.getElementById("role-nodes").innerHTML = data.roles.map((r) => {
-    const pos = ROLE_POS[r.id];
+  const roles = getOverviewRoles();
+  if (typeof Presentation !== "undefined") {
+    Presentation.syncRoleLayout(data);
+  }
+  const stageH = typeof Presentation !== "undefined"
+    ? Presentation.overviewStageHeight(roles.length)
+    : 520;
+  const stage = document.getElementById("overview-stage");
+  const roleNodes = document.getElementById("role-nodes");
+  if (stage) stage.style.minHeight = `${stageH}px`;
+  if (roleNodes) roleNodes.style.height = `${stageH}px`;
+  if (roleNodes) {
+    roleNodes.innerHTML = roles.map((r) => {
+    const pos = roleOverviewPos(r.id);
+    const short = typeof getRoleShort === "function" ? getRoleShort(r.id) : (ROLE_SHORT[r.id] || r.id);
     return `
       <div class="role-node" style="left:${pos.x}%;top:${pos.y}%" onclick="showRoleModal('${r.id}')" role="button" title="${escapeAttr(r.focus || STATUS_LABEL[r.workStatus] || "")}">
         <div class="avatar-wrap">
           <div class="status-ring ${r.workStatus}"></div>
-          <img src="../../assets/avatars/${r.id}.png" alt="${r.name}"/>
+          <img src="${avatarSrc(r.id)}" alt="${r.name}"/>
           <div class="status-icon ${r.workStatus}">${STATUS_SVG[r.workStatus]}</div>
         </div>
         <span class="name">${r.name}</span>
-        <span class="role-label">${ROLE_SHORT[r.id]}</span>
+        <span class="role-label">${short}</span>
       </div>`;
-  }).join("");
+    }).join("");
+  }
   renderDispatchBubbles();
   renderOverviewCollabPanel();
   renderOverviewFooter();
   scheduleDispatchBubbleRefresh();
   requestAnimationFrame(() => drawLines(document.getElementById("collab-svg")));
+  updateFabVisibility();
+}
+
+function updateFabVisibility() {
+  const fab = document.getElementById("fab-ceo");
+  if (!fab) return;
+  fab.hidden = getActiveViewId() === "overview";
 }
 
 function scheduleDispatchBubbleRefresh() {
@@ -1297,6 +1441,25 @@ async function openInboxItem(id) {
     return;
   }
 
+  if (item.category === "skill_proposal") {
+    const prop = item.proposedSkill || {};
+    const preview = (prop.rawMarkdown || prop.markdown || item.preview || "").trim();
+    const previewBlock = preview
+      ? `<pre class="stg-code" style="max-height:200px;overflow:auto;white-space:pre-wrap;font-size:0.72rem">${escapeAttr(preview.slice(0, 2000))}</pre>`
+      : `<p class="hint">${escapeAttr(item.preview || "无预览")}</p>`;
+    openModal(`
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">${channelBadge(item.channel)}<span class="cat-badge cat-skill_proposal">Skill 安装</span></div>
+      <h2 style="font-size:1.05rem;font-weight:700">${item.title}</h2>
+      <p style="font-size:0.82rem;color:var(--text2);margin:0.5rem 0 1rem;line-height:1.5">CEO 建议将此 Skill 纳入 Hub。采纳后自动 import + activate。</p>
+      ${previewBlock}
+      <div class="btn-row" style="margin-top:1rem">
+        <button class="btn-primary" onclick="approveSkillProposal('${item.id}')">采纳并安装</button>
+        <button class="btn-secondary" onclick="closeModal()">稍后</button>
+      </div>
+    `, "wide");
+    return;
+  }
+
   if (item.category === "proposal") {
     const prop = item.proposal || {};
     const ceoNote = prop.ceoNote
@@ -1400,6 +1563,19 @@ async function resolveProposal(itemId, action) {
   closeModal();
   await refreshDashboard();
   renderAll();
+}
+
+async function approveSkillProposal(itemId) {
+  try {
+    const res = await apiPost(`/inbox/${itemId}/skill-install`);
+    closeModal();
+    await refreshDashboard();
+    renderAll();
+    const sid = res.data?.skillId;
+    if (sid) alert(`Skill 已安装：${sid}`);
+  } catch (e) {
+    alert(`安装失败：${e.message}`);
+  }
 }
 
 async function adoptProfileSuggestion(suggestionId, inboxId) {
@@ -1584,7 +1760,7 @@ async function openCeoOffice() {
 
   openModal(`
     <div class="modal-hero" style="margin-bottom:0.75rem">
-      <img src="../../assets/avatars/ceo.png" alt=""/>
+      <img src="${avatarSrc('ceo')}" alt=""/>
       <div><h2>沈策 · CEO</h2><div class="sub">唯一管理接口 · 对话与指令</div></div>
     </div>
     <div class="channel-bar">
@@ -1804,15 +1980,11 @@ function showRoleConfig(roleId) {
 }
 
 async function saveRoleConfig(roleId) {
-  settingsRoleId = roleId;
-  await saveSettingsRole();
+  if (typeof stgRoleId !== "undefined") stgRoleId = roleId;
+  if (typeof stgSegment !== "undefined") stgSegment = "roles";
+  goToView("settings");
+  if (typeof saveStgRoleConfig === "function") await saveStgRoleConfig();
 }
-
-window.selectSettingsRole = selectSettingsRole;
-window.onSettingsProviderChange = onSettingsProviderChange;
-window.saveSettingsRole = saveSettingsRole;
-window.saveRuntimeSettings = saveRuntimeSettings;
-window.testSettingsConnection = testSettingsConnection;
 
 window.showRoleModalStacked = showRoleModalStacked;
 window.showRoleModal = showRoleModal;
@@ -1830,9 +2002,6 @@ window.resolveProposal = resolveProposal;
 window.adoptProfileSuggestion = adoptProfileSuggestion;
 window.dismissProfileSuggestion = dismissProfileSuggestion;
 window.onCeoFilesSelected = onCeoFilesSelected;
-window.saveFounderProfile = saveFounderProfile;
-window.toggleRolePromptPreview = toggleRolePromptPreview;
-window.toggleFounderProfilePreview = toggleFounderProfilePreview;
 window.closeModal = closeModal;
 window.markClosureItem = markClosureItem;
 window.exportCurrentMd = exportCurrentMd;
@@ -1848,6 +2017,7 @@ window.goToWeekly = goToWeekly;
 window.showRoleConfig = showRoleConfig;
 window.saveRoleConfig = saveRoleConfig;
 
-init().catch(() => {
-  document.body.innerHTML = '<div style="padding:2rem;text-align:center;font-family:-apple-system,sans-serif"><p>无法连接后端，请在项目根目录运行</p><code>./start.sh</code></div>';
+init().catch((err) => {
+  console.error("init failed", err);
+  document.body.innerHTML = '<div style="padding:2rem;text-align:center;font-family:-apple-system,sans-serif"><p>无法连接后端，请在项目根目录运行</p><code>./start.sh</code><p style="margin-top:1rem;font-size:0.85rem;color:#666">' + (err?.message || err) + '</p></div>';
 });

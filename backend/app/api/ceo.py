@@ -23,6 +23,7 @@ router = APIRouter(tags=["ceo"])
 class BriefBody(BaseModel):
     text: str
     attachmentIds: list[str] | None = None
+    skillChainId: str | None = None
 
 
 async def _run_plan_and_workflow_background(
@@ -96,15 +97,19 @@ async def _process_brief(
     background_tasks: BackgroundTasks,
     text: str,
     attachment_ids: list[str] | None = None,
+    skill_chain_id: str | None = None,
 ):
     text = text.strip()
     if not text and not attachment_ids:
         raise fail("INVALID_BRIEF", "消息不能为空")
 
     def _apply(dashboard):
-        return submit_ceo_brief(dashboard, text or "（附件）")
+        result = submit_ceo_brief(dashboard, text or "（附件）")
+        if skill_chain_id:
+            dashboard.setdefault("meta", {})["preferredSkillChainId"] = skill_chain_id
+        return result
 
-    run_mutation(session, _apply)
+    _, patch = run_mutation(session, _apply, patch_domains=["ceo", "pulse", "inbox", "projects"])
 
     background_tasks.add_task(
         _run_ceo_chat_background,
@@ -121,6 +126,7 @@ async def _process_brief(
             "thread": thread,
             "projectId": dashboard.get("meta", {}).get("activeProjectId"),
         },
+        patch=patch,
         processing=True,
         workflowPending=True,
         dispatchSummary={
@@ -137,9 +143,9 @@ def get_ceo_thread(session: Session = Depends(get_session)):
             return {"cleaned": True}
         return {"cleaned": False}
 
-    run_mutation(session, _clean)
+    _, patch = run_mutation(session, _clean, patch_domains=["ceo", "pulse"])
     dashboard = get_dashboard(session)
-    return ok(dashboard.get("ceoThread", []))
+    return ok(dashboard.get("ceoThread", []), patch=patch)
 
 
 @router.post("/ceo/brief")
@@ -152,17 +158,22 @@ async def post_ceo_brief(
     if "multipart/form-data" in content_type:
         form = await request.form()
         text = str(form.get("text") or "")
+        skill_chain_id = str(form.get("skillChainId") or "").strip() or None
         upload_files = [f for f in form.getlist("files") if isinstance(f, UploadFile)]
         attachment_ids: list[str] = []
         with mutate(session) as dashboard:
             for upload in upload_files:
                 raw = await upload.read()
                 attachment_ids.append(_ingest_upload(dashboard, upload, raw))
-        return await _process_brief(session, background_tasks, text, attachment_ids)
+        return await _process_brief(
+            session, background_tasks, text, attachment_ids, skill_chain_id
+        )
 
     body = BriefBody(**await request.json())
     merged_ids = list(body.attachmentIds or [])
-    return await _process_brief(session, background_tasks, body.text, merged_ids or None)
+    return await _process_brief(
+        session, background_tasks, body.text, merged_ids or None, body.skillChainId
+    )
 
 
 @router.post("/ingress/attachments")
@@ -181,7 +192,8 @@ async def upload_attachment(
         )
 
     try:
-        return ok(run_mutation(session, _apply))
+        result, patch = run_mutation(session, _apply, patch_domains=["inbox", "skills", "pulse"])
+        return ok(result, patch=patch)
     except ValueError as exc:
         code = str(exc)
         if code == "FILE_TOO_LARGE":

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
@@ -20,7 +20,9 @@ from app.presentation.roles_registry import (
     registry_entry,
     registry_summary,
 )
-from app.security.secrets import encrypt, mask_api_key
+from app.security.role_credentials import SLOT_KEYS, get_slot_runtime, patch_slot
+from app.security.secrets import mask_api_key
+from app.services.avatar_storage import save_role_avatar
 from app.services.dashboard_store import get_dashboard, mutate
 from app.services.llm_client import LlmError, test_connection
 from app.runners.prompts import default_role_prompt
@@ -87,13 +89,27 @@ def _merge_test_runtime(runtime, body: RoleConfigTestBody | None):
         return runtime
     from dataclasses import replace
 
-    return replace(
+    cap = (body.capability if body else None) or "text"
+    merged = replace(
         runtime,
         model=body.model or runtime.model,
         api_provider=body.apiProvider or runtime.api_provider,
         api_base_url=(body.apiBaseUrl or runtime.api_base_url).rstrip("/"),
         api_key=body.apiKey or runtime.api_key,
     )
+    return merged
+
+
+def _apply_slot_secrets_to_config(item: dict, row: RoleSecret | None) -> None:
+    models = item.setdefault("models", {})
+    for cap in SLOT_KEYS:
+        slot = models.setdefault(cap, {})
+        runtime = get_slot_runtime(row, cap)
+        if runtime.get("api_base_url"):
+            slot["apiBaseUrl"] = runtime["api_base_url"]
+        slot["apiKeyConfigured"] = runtime["api_key_configured"]
+        masked = mask_api_key(runtime["api_key"]) if runtime["api_key"] else None
+        slot["apiKeyMasked"] = masked["masked"] if masked else None
 
 
 def _build_role_config(session: Session, dashboard: dict) -> list[dict]:
@@ -119,27 +135,15 @@ def _build_role_config(session: Session, dashboard: dict) -> list[dict]:
                     role.get("name") or role_id or "",
                     role.get("charter") or "",
                 )
+        _apply_slot_secrets_to_config(item, row)
         # Legacy flat fields for backward compat
         text = (item.get("models") or {}).get("text") or {}
         item["model"] = text.get("model") or item.get("model") or ""
         item["apiProvider"] = text.get("apiProvider") or item.get("apiProvider") or "OpenRouter"
-        if row and row.api_base_url:
-            item["apiBaseUrl"] = row.api_base_url
-            if item.get("models"):
-                item["models"]["text"]["apiBaseUrl"] = row.api_base_url
-        elif text.get("apiBaseUrl"):
-            item["apiBaseUrl"] = text["apiBaseUrl"]
-        else:
-            item["apiBaseUrl"] = item.get("apiBaseUrl") or "https://openrouter.ai/api/v1"
-        if row and row.api_key_encrypted:
-            from app.security.secrets import decrypt
-
-            masked = mask_api_key(decrypt(row.api_key_encrypted))
-            item["apiKey"] = masked
-            item["apiKeyConfigured"] = True
-        else:
-            item["apiKey"] = None
-            item["apiKeyConfigured"] = False
+        item["apiBaseUrl"] = text.get("apiBaseUrl") or item.get("apiBaseUrl") or "https://openrouter.ai/api/v1"
+        item["apiKeyConfigured"] = bool(text.get("apiKeyConfigured"))
+        masked = text.get("apiKeyMasked")
+        item["apiKey"] = {"masked": masked} if masked else None
         configs.append(item)
     return configs
 
@@ -186,6 +190,34 @@ def patch_role_identity_endpoint(
     if role is None:
         raise fail("ROLE_NOT_FOUND", "角色不存在", status=404)
     return ok(role)
+
+
+@router.post("/roles/{role_id}/avatar")
+async def upload_role_avatar(
+    role_id: str,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+):
+    dashboard = get_dashboard(session)
+    if registry_entry(dashboard, role_id) is None:
+        raise fail("ROLE_NOT_FOUND", "角色不存在", status=404)
+    raw = await file.read()
+    try:
+        avatar_url = save_role_avatar(role_id, raw, file.content_type)
+    except ValueError as exc:
+        code = str(exc)
+        if code == "FILE_TOO_LARGE":
+            raise fail("FILE_TOO_LARGE", "头像过大（最大 5MB）", status=413) from exc
+        if code == "UNSUPPORTED_FORMAT":
+            raise fail("UNSUPPORTED_FORMAT", "仅支持 PNG / JPEG / WebP / GIF", status=400) from exc
+        if code == "EMPTY_FILE":
+            raise fail("EMPTY_FILE", "文件为空", status=400) from exc
+        raise
+    with mutate(session) as dashboard:
+        role = patch_role_identity(dashboard, role_id, {"avatar": avatar_url})
+    if role is None:
+        raise fail("ROLE_NOT_FOUND", "角色不存在", status=404)
+    return ok({"roleId": role_id, "avatar": avatar_url, "role": role})
 
 
 @router.get("/roles/{role_id}/profile")
@@ -274,6 +306,7 @@ def update_role_config(
     with mutate(session) as dash:
         target = next(c for c in dash["roleConfig"] if c.get("roleId") == role_id)
         migrate_role_config_models(target)
+        slot_key_patches: list[tuple[str, str | None, str | None]] = []
         # Flat model fields → models.text
         if "model" in updates:
             target.setdefault("models", {}).setdefault("text", {})["model"] = updates.pop("model")
@@ -282,15 +315,20 @@ def update_role_config(
                 "apiProvider"
             )
         if "apiBaseUrl" in updates:
-            target.setdefault("models", {}).setdefault("text", {})["apiBaseUrl"] = updates.pop(
-                "apiBaseUrl"
-            )
+            base = updates.pop("apiBaseUrl")
+            target.setdefault("models", {}).setdefault("text", {})["apiBaseUrl"] = base
+            slot_key_patches.append(("text", base, None))
         if "models" in updates:
             models_patch = updates.pop("models")
             base_models = target.setdefault("models", {})
             for slot, slot_val in models_patch.items():
-                if isinstance(slot_val, dict):
-                    base_models.setdefault(slot, {}).update(slot_val)
+                if not isinstance(slot_val, dict):
+                    continue
+                slot_key = slot_val.pop("apiKey", None)
+                base_url = slot_val.get("apiBaseUrl")
+                base_models.setdefault(slot, {}).update(slot_val)
+                if slot_key or base_url is not None:
+                    slot_key_patches.append((slot, base_url, slot_key))
         for key, value in updates.items():
             target[key] = value
 
@@ -298,14 +336,15 @@ def update_role_config(
     now = datetime.now(timezone.utc)
     if row is None:
         row = RoleSecret(role_id=role_id, updated_at=now)
-    base_url = body.apiBaseUrl
-    if base_url is None and body.models:
-        text = (body.models or {}).get("text") or {}
-        base_url = text.get("apiBaseUrl")
-    if base_url is not None:
-        row.api_base_url = base_url
     if api_key:
-        row.api_key_encrypted = encrypt(api_key)
+        patch_slot(row, "text", api_key=api_key)
+    for cap, base_url, slot_key in slot_key_patches:
+        patch_slot(
+            row,
+            cap,
+            api_base_url=base_url if base_url is not None else None,
+            api_key=slot_key,
+        )
     row.updated_at = now
     session.add(row)
     session.commit()
@@ -330,7 +369,10 @@ async def test_role_config(
         raise fail("ROLE_NOT_FOUND", "角色不存在", status=404)
 
     runtime = _merge_test_runtime(
-        get_role_runtime_config(session, dashboard, role_id), body
+        get_role_runtime_config(
+            session, dashboard, role_id, capability=(body.capability if body else "text")
+        ),
+        body,
     )
     if not runtime.is_configured:
         raise fail(

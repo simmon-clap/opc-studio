@@ -44,7 +44,7 @@ async def send_current_weekly(session: Session = Depends(get_session)):
         return send_weekly(dashboard)
 
     try:
-        result = run_mutation(session, _apply)
+        result, patch = run_mutation(session, _apply, patch_domains=["inbox", "pulse", "ceo"])
     except ValueError as exc:
         code = str(exc)
         if code == "WEEKLY_NOT_FOUND":
@@ -55,7 +55,7 @@ async def send_current_weekly(session: Session = Depends(get_session)):
 
     week = result.get("weeklyReport", {}).get("week")
     await orchestrator_hooks.on_weekly_sent(week)
-    return ok(result)
+    return ok(result, patch=patch)
 
 
 @router.get("/weekly/current/export")

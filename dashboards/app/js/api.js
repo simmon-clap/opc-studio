@@ -13,6 +13,7 @@ async function apiFetch(method, path, body) {
     if (!res.ok || json.ok === false) {
       throw new Error(json.error?.message || `HTTP ${res.status}`);
     }
+    mergeApiResponse(json);
     return json;
   }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -49,15 +50,21 @@ async function apiPostForm(path, formData) {
   return res;
 }
 
-async function postCeoBrief(text, files = []) {
+async function postCeoBrief(text, files = [], options = {}) {
   const trimmed = (text || "").trim();
   if (files?.length) {
     const fd = new FormData();
     fd.append("text", trimmed || "请阅读附件");
+    if (options.skillChainId) fd.append("skillChainId", options.skillChainId);
     files.forEach((f) => fd.append("files", f));
-    return apiPostForm("/ceo/brief", fd);
+    const res = await fetch(`${API_BASE}/ceo/brief`, { method: "POST", body: fd });
+    const ct = res.headers.get("content-type") || "";
+    const json = await res.json();
+    if (!res.ok || json.ok === false) throw new Error(json.error?.message || `HTTP ${res.status}`);
+    mergeApiResponse(json);
+    return json;
   }
-  return apiPost("/ceo/brief", { text: trimmed });
+  return apiPost("/ceo/brief", { text: trimmed, skillChainId: options.skillChainId || null });
 }
 
 async function probeApiCapabilities() {
@@ -99,6 +106,26 @@ async function refreshDashboard() {
     Presentation.syncRoleLayout(data);
   }
   return data;
+}
+
+function applyDashboardPatch(patch) {
+  if (!patch || typeof patch !== "object" || !data) return false;
+  let changed = false;
+  Object.entries(patch).forEach(([key, val]) => {
+    if (val !== undefined) {
+      data[key] = val;
+      changed = true;
+    }
+  });
+  if (changed && typeof Presentation !== "undefined") {
+    Presentation.syncRoleLayout(data);
+  }
+  return changed;
+}
+
+function mergeApiResponse(json) {
+  if (json?.patch) applyDashboardPatch(json.patch);
+  return json;
 }
 
 async function loadRoleConfigs() {

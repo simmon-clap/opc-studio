@@ -1,0 +1,14 @@
+{
+  "name": "openclaw-opc-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Forward OpenClaw Gateway WeChat messages to OPC Studio CEO inbound",
+  "type": "module",
+  "scripts": {
+    "start": "node opc-bridge.mjs",
+    "dev": "node --watch opc-bridge.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

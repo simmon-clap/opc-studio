@@ -158,6 +158,7 @@ def sync_skill_catalog(dashboard: dict[str, Any]) -> None:
     routes = meta.setdefault("skillRoutes", {})
     for k, v in DEFAULT_SKILL_ROUTES.items():
         routes.setdefault(k, v)
+    meta.setdefault("chainRoutes", {})
 
 
 def get_skill(dashboard: dict[str, Any], skill_id: str) -> dict[str, Any] | None:
@@ -260,6 +261,30 @@ def get_chain(dashboard: dict[str, Any], chain_id: str) -> dict[str, Any] | None
         (c for c in dashboard.get("skillChains", []) if c.get("id") == chain_id),
         None,
     )
+
+
+def resolve_skill_chain(
+    dashboard: dict[str, Any],
+    *,
+    task_kind: str | None = None,
+    deliverable_kind: str | None = None,
+) -> str | None:
+    """Auto-pick skill chain from meta.chainRoutes or chain.taskKinds."""
+    sync_skill_catalog(dashboard)
+    meta = dashboard.get("meta") or {}
+    routes = meta.get("chainRoutes") or {}
+    for key in (task_kind, deliverable_kind):
+        if key and routes.get(key):
+            return str(routes[key])
+    chains = dashboard.get("skillChains") or []
+    for key in (task_kind, deliverable_kind):
+        if not key:
+            continue
+        for chain in chains:
+            kinds = chain.get("taskKinds") or []
+            if key in kinds and chain.get("id"):
+                return chain["id"]
+    return None
 
 
 def route_skill(

@@ -9,7 +9,7 @@ from sqlmodel import Session
 
 from app.agency.auto_dispatch import apply_auto_dispatch
 from app.agency.bus import publish_signals
-from app.agency.deliberate import run_ceo_deliberate
+from app.agency.deliberate import deliberate_role_llm, run_ceo_deliberate
 from app.agency.modules.roles import ROLE_OBSERVERS
 from app.services.dashboard_store import get_dashboard, mutate
 from app.services.runtime_settings import get_runtime_settings
@@ -71,6 +71,9 @@ async def tick_agency(session: Session, *, role_id: str | None = None) -> dict[s
                 "signals": len(signals),
                 **result,
             }
+            if rid != "ceo" and result.get("created", 0) > 0:
+                role_delib = await deliberate_role_llm(session, dashboard, rid)
+                telemetry["roles"][rid]["roleDeliberate"] = role_delib
             telemetry["created"] += result.get("created", 0)
             telemetry["skipped"] += result.get("skipped", 0)
 

@@ -9,7 +9,7 @@ from sqlmodel import Session
 
 from app.models.role_secrets import RoleSecret
 from app.presentation.roles_registry import migrate_role_config_models
-from app.security.secrets import decrypt
+from app.security.role_credentials import get_slot_runtime
 
 
 @dataclass
@@ -31,7 +31,7 @@ class RoleRuntimeConfig:
 
 
 def get_role_runtime_config(
-    session: Session, dashboard: dict[str, Any], role_id: str
+    session: Session, dashboard: dict[str, Any], role_id: str, capability: str = "text"
 ) -> RoleRuntimeConfig:
     cfg = next(
         (c for c in dashboard.get("roleConfig", []) if c.get("roleId") == role_id),
@@ -42,15 +42,19 @@ def get_role_runtime_config(
 
     migrate_role_config_models(cfg if isinstance(cfg, dict) else {})
     cfg_dict = cfg if isinstance(cfg, dict) else {}
-    text_slot = (cfg_dict.get("models") or {}).get("text") or {}
+    cap = capability if capability in ("text", "image", "video", "code") else "text"
+    slot = (cfg_dict.get("models") or {}).get(cap) or {}
+    if cap == "text" and not slot:
+        slot = (cfg_dict.get("models") or {}).get("text") or {}
 
-    api_key = None
-    api_base_url = text_slot.get("apiBaseUrl") or cfg_dict.get("apiBaseUrl") or "https://openrouter.ai/api/v1"
-    if secret:
-        if secret.api_base_url:
-            api_base_url = secret.api_base_url
-        if secret.api_key_encrypted:
-            api_key = decrypt(secret.api_key_encrypted)
+    cred = get_slot_runtime(secret, cap)
+    api_base_url = (
+        cred.get("api_base_url")
+        or slot.get("apiBaseUrl")
+        or cfg_dict.get("apiBaseUrl")
+        or "https://openrouter.ai/api/v1"
+    )
+    api_key = cred.get("api_key")
 
     profile_doc = (
         (dashboard.get("roleProfiles") or {}).get(role_id, {}).get("document") or ""
@@ -58,8 +62,8 @@ def get_role_runtime_config(
 
     return RoleRuntimeConfig(
         role_id=role_id,
-        model=text_slot.get("model") or cfg_dict.get("model") or "gpt-4o-mini",
-        api_provider=text_slot.get("apiProvider") or cfg_dict.get("apiProvider") or "OpenRouter",
+        model=slot.get("model") or cfg_dict.get("model") or "gpt-4o-mini",
+        api_provider=slot.get("apiProvider") or cfg_dict.get("apiProvider") or "OpenRouter",
         api_base_url=api_base_url.rstrip("/"),
         api_key=api_key,
         monthly_budget=int(cfg_dict.get("monthlyBudget") or 0),

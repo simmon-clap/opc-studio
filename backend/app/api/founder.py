@@ -41,7 +41,8 @@ def write_profile(body: ProfilePatchBody, session: Session = Depends(get_session
     def _apply(dashboard):
         return update_profile(dashboard, patch)
 
-    return ok(run_mutation(session, _apply))
+    result, patch = run_mutation(session, _apply, patch_domains=["inbox", "pulse", "ceo"])
+    return ok(result, patch=patch)
 
 
 @router.post("/founder/profile/suggestions/{suggestion_id}/adopt")
@@ -55,7 +56,8 @@ def adopt_profile_suggestion(
         return item
 
     try:
-        return ok(run_mutation(session, _apply))
+        result, patch = run_mutation(session, _apply, patch_domains=["inbox", "pulse", "ceo"])
+        return ok(result, patch=patch)
     except ValueError as exc:
         raise fail("SUGGESTION_NOT_FOUND", "建议不存在或已处理", status=404) from exc
 
@@ -71,6 +73,7 @@ def dismiss_profile_suggestion(
         return item
 
     try:
-        return ok(run_mutation(session, _apply))
+        result, patch = run_mutation(session, _apply, patch_domains=["inbox", "pulse", "ceo"])
+        return ok(result, patch=patch)
     except ValueError as exc:
         raise fail("SUGGESTION_NOT_FOUND", "建议不存在或已处理", status=404) from exc

@@ -23,6 +23,7 @@ chmod +x start.sh   # 首次
 | [backend/](backend/) | FastAPI + SQLite + Orchestrator |
 | [dashboards/app/](dashboards/app/) | 看板前端 |
 | [mock/dashboard.json](mock/dashboard.json) | 契约黄金样本 |
+| [docs/DEV-STATUS.md](docs/DEV-STATUS.md) | **开发状态 SSOT**（已完成 / 未完成 backlog） |
 | [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | 全链路开发计划 v2.0 |
 | [docs/AGENTS.md](docs/AGENTS.md) | Agent 编排设计 |
 | [docs/API.md](docs/API.md) | API 契约 |
@@ -30,14 +31,17 @@ chmod +x start.sh   # 首次
 
 ## 已实现
 
+> 完整 backlog 见 [docs/DEV-STATUS.md](docs/DEV-STATUS.md)
+
 | 阶段 | 状态 |
 |------|------|
 | Phase 1 Mock 看板 | ✅ |
 | Phase 2a–c 控制面 API | ✅ |
-| Phase 2e 角色配置加密 | ✅ |
-| Phase 3a–f 编排骨架 + Stub Runners + 会诊室 | ✅ |
-| Phase 2d / 4 飞书深度集成 | 未做 |
-| 真实 LLM 调用 | 未做（Stub Runner；配置 Key 后可扩展） |
+| Phase 2e 角色配置 · 头像 · 分槽 Key | ✅ |
+| Phase 3a–f 编排骨架 + Runners + 会诊 API | ✅（Stub 默认；配 Key 可走 LLM） |
+| Pulse/Agency · 设置 Epic 1–2 | ✅ |
+| 设置 Epic 3–5 · 渠道 inbound | ⚠️ 后端主体；UI/MCP/飞书全链路缺 |
+| Phase 2d / 4 飞书 Webhook + 出站 | ❌ |
 
 ## 开发
 

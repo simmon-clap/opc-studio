@@ -324,7 +324,7 @@ function renderProjectRoleCosts(byRole) {
         const r = getRole(row.roleId);
         return `
         <div class="fin-role-row">
-          <img src="../../assets/avatars/${row.roleId}.png" alt="" width="28" height="28"/>
+          <img src="${typeof avatarSrc === "function" ? avatarSrc(row.roleId) : `/assets/avatars/${row.roleId}.png`}" alt="" width="28" height="28"/>
           <span class="name">${escapeHtml(r?.name || row.roleId)}</span>
           <span class="tokens">${((row.tokens || 0) / 1000).toFixed(0)}k</span>
           <span class="cost">${fmtMoney(row.cost)}</span>
@@ -423,7 +423,7 @@ function renderCosts() {
           const cfg = data.roleConfig?.find((x) => x.roleId === row.roleId);
           return `
           <button type="button" class="role-cost-row glass" onclick="showRoleConfig('${row.roleId}')">
-            <img src="../../assets/avatars/${row.roleId}.png" alt=""/>
+            <img src="${typeof avatarSrc === "function" ? avatarSrc(row.roleId) : `/assets/avatars/${row.roleId}.png`}" alt=""/>
             <div class="info">
               <div class="name">${escapeHtml(r?.name || row.roleId)} · ${ROLE_SHORT[row.roleId] || row.roleId}</div>
               <div class="bar-wrap"><div class="bar" style="width:${row.sharePct}%"></div></div>

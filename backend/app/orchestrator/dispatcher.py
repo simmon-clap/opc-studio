@@ -22,6 +22,7 @@ def dispatch_task(
     status: str = "pending",
     priority: str = "normal",
     deliverable_kind: str | None = None,
+    skill_chain_id: str | None = None,
 ) -> dict[str, Any]:
     now = _now_iso()
     task_id = f"task-{role_id}-{uuid4().hex[:6]}"
@@ -46,6 +47,8 @@ def dispatch_task(
         task["startedAt"] = now
     if deliverable_kind:
         task["deliverableKind"] = deliverable_kind
+    if skill_chain_id:
+        task["skillChainId"] = skill_chain_id
     dashboard.setdefault("tasks", []).insert(0, task)
     if role_id != "ceo":
         log_assign(

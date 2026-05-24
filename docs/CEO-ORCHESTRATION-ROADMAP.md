@@ -3,9 +3,9 @@
 | 项 | 内容 |
 |----|------|
 | 版本 | v0.2 |
-| 状态 | **v0.8.0 已实现** · Phase 0–5 代码落地 |
+| 状态 | **Phase 0–5 代码落地** · Phase 2 Review **⚠️ 规则分，非 LLM** · [DEV-STATUS.md](./DEV-STATUS.md) |
 | 关联 | [AGENTS.md](./AGENTS.md) · [API.md](./API.md) · [BACKEND.md](./BACKEND.md) · [IMPLEMENTATION.md](./IMPLEMENTATION.md) |
-| 代码基线 | OPC Studio **v0.3.0**（`backend/app/config.py`） |
+| 代码基线 | OPC Studio **v0.9.x** |
 
 ---
 
@@ -260,7 +260,9 @@ run_ceo_turn → ceo_structured_turn (LLM #1, JSON)
 
 ---
 
-### Phase 2：CEO 内审与打回（Review Loop）— **G5、G6**
+### Phase 2：CEO 内审与打回（Review Loop）— **G5、G6** ⚠️
+
+> **实现状态（2026-05）：** `ceo_review.py` + 规则 validator + revision 环 ✅；**LLM 评审层未接**（`ceoReviewScore` 为规则分）。完整 LLM Review → [DEV-STATUS AG-3](./DEV-STATUS.md#32-p0--agent-可演示)。
 
 **目标：** CEO 审员工产出，不合格自动重派，合格后再交 Founder。
 

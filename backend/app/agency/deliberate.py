@@ -134,6 +134,74 @@ async def deliberate_ceo_llm(
         return {"usedLlm": False, "reason": str(exc)}
 
 
+async def deliberate_role_llm(
+    session: Session,
+    dashboard: dict[str, Any],
+    role_id: str,
+) -> dict[str, Any]:
+    """Optional LLM — enrich role proposals with one-line rationale."""
+    settings = get_runtime_settings(dashboard)
+    if not settings.get("agency", {}).get("roleDeliberateUseLlm"):
+        return {"usedLlm": False, "roleId": role_id}
+
+    cfg = get_role_runtime_config(session, dashboard, role_id)
+    if not cfg.is_configured:
+        return {"usedLlm": False, "roleId": role_id, "reason": "not_configured"}
+
+    proposals = [
+        i
+        for i in dashboard.get("inbox") or []
+        if i.get("category") == "proposal"
+        and i.get("status") == "active"
+        and i.get("from") == role_id
+        and not (i.get("proposal") or {}).get("roleNote")
+    ][:3]
+    if not proposals:
+        return {"usedLlm": False, "roleId": role_id, "annotated": 0}
+
+    lines = [
+        f"- {p.get('id')}: {p.get('title')} | {(p.get('proposal') or {}).get('suggestedAction')}"
+        for p in proposals
+    ]
+    prompt = (
+        f"你是 {role_id} 角色。以下为观察建议，用 JSON 数组回复，每项含 inboxId 与 note（一句中文）。\n"
+        + "\n".join(lines)
+    )
+    try:
+        resp = await chat_completion(
+            cfg,
+            messages=[
+                {"role": "system", "content": "只输出 JSON 数组 [{\"inboxId\":\"...\",\"note\":\"...\"}]"},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,
+        )
+        raw = (resp.content or "").strip()
+        if raw.startswith("```"):
+            raw = raw.split("```", 2)[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        notes = json.loads(raw)
+        annotated = 0
+        if isinstance(notes, list):
+            for entry in notes:
+                if not isinstance(entry, dict):
+                    continue
+                iid = entry.get("inboxId")
+                note = entry.get("note")
+                if not iid or not note:
+                    continue
+                for item in proposals:
+                    if item.get("id") == iid:
+                        item.setdefault("proposal", {})["roleNote"] = str(note)[:200]
+                        annotated += 1
+                        break
+        return {"usedLlm": True, "roleId": role_id, "annotated": annotated}
+    except (LlmError, json.JSONDecodeError) as exc:
+        logger.warning("Role deliberate LLM skipped (%s): %s", role_id, exc)
+        return {"usedLlm": False, "roleId": role_id, "reason": str(exc)}
+
+
 async def run_ceo_deliberate(session: Session, dashboard: dict[str, Any]) -> dict[str, Any]:
     merge_result = deliberate_merge_proposals(dashboard)
     llm_result = await deliberate_ceo_llm(session, dashboard)

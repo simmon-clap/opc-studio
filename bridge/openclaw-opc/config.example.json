@@ -1,0 +1,9 @@
+{
+  "opcInboundUrl": "http://127.0.0.1:8765/api/v1/channels/inbound",
+  "opcChannelToken": "",
+  "openclawGatewayUrl": "http://127.0.0.1:9200",
+  "openclawToken": "my-agent-token",
+  "pollIntervalMs": 500,
+  "longPollTimeoutSec": 25,
+  "defaultSenderName": "Founder"
+}

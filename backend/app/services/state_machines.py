@@ -188,14 +188,14 @@ def sanitize_ceo_thread(dashboard: dict[str, Any]) -> bool:
     return False
 
 
-def submit_ceo_brief(dashboard: dict[str, Any], text: str) -> dict[str, Any]:
+def submit_ceo_brief(dashboard: dict[str, Any], text: str, channel: str = "web") -> dict[str, Any]:
     sanitize_ceo_thread(dashboard)
     thread = dashboard.setdefault("ceoThread", [])
     thread.append(
         {
             "id": f"thread-{uuid4().hex[:8]}",
             "direction": "founder_to_ceo",
-            "channel": "web",
+            "channel": channel if channel in ("web", "wechat", "feishu") else "web",
             "text": text,
             "at": _now_iso(),
         }
@@ -203,7 +203,7 @@ def submit_ceo_brief(dashboard: dict[str, Any], text: str) -> dict[str, Any]:
     reply = {
         "id": f"thread-{uuid4().hex[:8]}",
         "direction": "ceo_to_founder",
-        "channel": "web",
+        "channel": channel if channel in ("web", "wechat", "feishu") else "web",
         "type": "ack",
         "text": "…",
         "at": _now_iso(),
