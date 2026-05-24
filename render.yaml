@@ -1,0 +1,19 @@
+# Render Blueprint — connect GitHub repo → New Blueprint → select this file.
+# Free tier: *.onrender.com subdomain; disk keeps SQLite across restarts (1 GB).
+services:
+  - type: web
+    name: opc-studio
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: OPC_SECRET_KEY
+        generateValue: true
+      - key: OPC_DATA_DIR
+        value: /data
+      - key: OPC_HOST
+        value: 0.0.0.0
+    disk:
+      name: opc-data
+      mountPath: /data
+      sizeGB: 1

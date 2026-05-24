@@ -29,4 +29,5 @@ build/
 # Logs
 *.log
 logs/
+backups/
 assets/uploads/

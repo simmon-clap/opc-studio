@@ -19,6 +19,16 @@ cp .env.example .env          # 首次：设置 OPC_SECRET_KEY
 # http://127.0.0.1:8765/dashboards/app/
 ```
 
+### macOS 后台常驻
+
+项目在 `~/Documents` 时，LaunchAgent 常因系统隐私限制无法执行；安装脚本会自动降级为 nohup 守护进程：
+
+```bash
+./deploy/macos/install.sh     # 安装依赖 + 启动 + 健康检查
+./deploy/macos/stop.sh        # 停止
+# 日志：data/logs/opc-studio.{out,err}.log
+```
+
 **升级四步：**
 
 ```bash
@@ -38,7 +48,48 @@ git tag v$(cat VERSION)
 
 ---
 
-## 不想买服务器？可选方案对比
+## GitHub → 云端（推荐 Render）
+
+本项目是 **FastAPI + SQLite + 本地文件**，与 Vercel / Cloudflare Pages 的静态或 Serverless 模型不兼容：
+
+| 平台 | 免费域名 | 能否跑整套 OPC Studio |
+|------|----------|------------------------|
+| **Render** | `*.onrender.com` | ✅ Docker + 持久盘 |
+| **Fly.io** | `*.fly.dev` | ✅ Docker + Volume |
+| Vercel | `*.vercel.app` | ❌ 无持久 SQLite |
+| Cloudflare Pages | `*.pages.dev` | ❌ 仅静态页 |
+| Cloudflare Workers | — | ❌ 需重写存储层 |
+
+### 一键：Render Blueprint（从 GitHub）
+
+1. 把代码推到 GitHub（`main` 或你的发布分支）
+2. 打开 [Render Dashboard](https://dashboard.render.com/) → **New** → **Blueprint**
+3. 连接仓库 `simmon-clap/opc-studio`，选中根目录 `render.yaml`
+4. 部署完成后访问 `https://opc-studio.onrender.com/dashboards/app/`
+5. 在 Render 环境变量中可选设置 `OPC_ACCESS_TOKEN`（公网鉴权）
+
+`render.yaml` 已配置：Docker 构建、健康检查、`OPC_SECRET_KEY` 自动生成、1GB 磁盘挂载 `/data` 存 SQLite。
+
+### 备选：Fly.io（GitHub Actions）
+
+```bash
+# 本地首次
+brew install flyctl
+fly auth login
+fly launch --no-deploy    # 按提示创建 app + volume
+fly secrets set OPC_SECRET_KEY="$(python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')"
+fly deploy
+```
+
+自动部署：在 GitHub 仓库 Settings → Secrets 添加 `FLY_API_TOKEN`，推送 `main` 触发 `.github/workflows/deploy-fly.yml`。
+
+### Cloudflare 能做什么？
+
+- **临时演示 URL**：本机 `./start.sh` + `cloudflared tunnel --url http://127.0.0.1:8765` → 随机 `*.trycloudflare.com`（见下方 Tunnel 章节）
+- **自有域名 HTTPS**：Render/Fly 部署好后，在 Cloudflare DNS 把 `studio.yourdomain.com` CNAME 到 Render/Fly 提供的地址
+- **不能** 仅用 Cloudflare Pages 跑 API + SQLite
+
+---
 
 | 方案 | 费用 | 适合 | 限制 |
 |------|------|------|------|

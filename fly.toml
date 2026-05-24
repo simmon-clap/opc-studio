@@ -1,0 +1,28 @@
+# Fly.io — fly launch / fly deploy (needs flyctl + FLY_API_TOKEN in CI).
+app = "opc-studio"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  OPC_HOST = "0.0.0.0"
+  OPC_DATA_DIR = "/data"
+  PYTHONPATH = "/app/backend/app"
+
+[http_service]
+  internal_port = 8765
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[mounts]]
+  source = "opc_data"
+  destination = "/data"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

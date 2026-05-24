@@ -14,7 +14,7 @@ DB_PATH = DATA_DIR / "opc.db"
 MOCK_DASHBOARD_PATH = PROJECT_ROOT / "mock" / "dashboard.json"
 
 HOST = os.environ.get("OPC_HOST", "127.0.0.1")
-PORT = int(os.environ.get("OPC_PORT", "8765"))
+PORT = int(os.environ.get("OPC_PORT") or os.environ.get("PORT", "8765"))
 
 _VERSION_FILE = PROJECT_ROOT / "VERSION"
 if _VERSION_FILE.is_file():
