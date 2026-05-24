@@ -461,14 +461,18 @@ function closeSheet() {
 function getProject(id) { return data.projects.find((p) => p.id === id); }
 function getRole(id) { return data.roles.find((r) => r.id === id); }
 
+const AVATAR_ASSET_VERSION = "2";
+
 function avatarSrc(roleId) {
   const role = typeof getRole === "function" ? getRole(roleId) : null;
   const av = role?.avatar;
-  if (av && (av.startsWith("http://") || av.startsWith("https://") || av.startsWith("/"))) return av;
-  return `/assets/avatars/${roleId}.png`;
+  if (av && (av.startsWith("http://") || av.startsWith("https://") || av.startsWith("/"))) {
+    return av.includes("?") ? av : `${av}?v=${AVATAR_ASSET_VERSION}`;
+  }
+  return `/assets/avatars/${roleId}.png?v=${AVATAR_ASSET_VERSION}`;
 }
 
-const AVATAR_FALLBACK = "/assets/brand/logo.png";
+const AVATAR_FALLBACK = "/assets/avatars/default.png";
 function onAvatarError(img) {
   if (!img || img.dataset.fallbackApplied) return;
   img.dataset.fallbackApplied = "1";

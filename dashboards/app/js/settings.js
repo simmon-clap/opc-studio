@@ -116,11 +116,13 @@ function getRoleShort(roleId) {
   return typeof ROLE_SHORT !== "undefined" ? ROLE_SHORT[roleId] || roleId : roleId;
 }
 
+const STG_AVATAR_VERSION = "2";
+
 function stgAvatarSrc(roleId, avatar) {
   if (avatar && (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/"))) {
-    return avatar;
+    return avatar.includes("?") ? avatar : `${avatar}?v=${STG_AVATAR_VERSION}`;
   }
-  return `/assets/avatars/${roleId}.png`;
+  return `/assets/avatars/${roleId}.png?v=${STG_AVATAR_VERSION}`;
 }
 
 function stgEscape(s) {
